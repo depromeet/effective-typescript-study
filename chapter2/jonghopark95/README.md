@@ -874,7 +874,7 @@ interface IPair<T> {
 
 
 
-인터페이스는 타입을 확장할 수 있으며, 타입은 인터페이스를 확장할 수 있다.
+**인터페이스는 타입을 확장할 수 있으며, 타입은 인터페이스를 확장할 수 있다.**
 
 ```tsx
 interface IStateWithPop extends TState {
@@ -954,7 +954,7 @@ interface도 비슷하게 구현할 수는 있으나, tuple에서 사용할 수 
 
 
 
-반면, interface에는 augment(보강)이 가능하다.
+**반면, interface에는 augment(보강)이 가능하다.**
 
 ```tsx
 interface IState {
@@ -1013,7 +1013,7 @@ DRY(don't repeat yourself) 원칙은 소프트웨어 개발자라면 누구나 �
 
 그러나 타입에 대해선, 다들 이를 간과했을 가능성이 있다. 타입 간에 매핑을 하는 방법을 익히면, 타입 정의에서도 DRY의 장점을 활용할 수 있다.
 
-반복을 줄이는 방법은 다양하다.
+**반복을 줄이는 방법은 다양하다.**
 
 * 객체 리터럴을 타입 선언하여 중복 분리하기
 
@@ -1182,7 +1182,7 @@ type OptionsUpdate = Partial<Options>;
 
 ### typeof
 
-값의 형태에 해당하는 타입을 정의하고 싶을 경우도 있다. 이런 경우, typeof를 쓰면 된다.
+값의 형태에 해당하는 타입을 정의하고 싶을 경우도 있다. 이런 경우, typeof 를 쓰면 된다.
 
 ```tsx
 const INIT_OPTIONS = {
@@ -1222,7 +1222,7 @@ ReturnType은 함수의 '값'이 아닌, '타입'에 적용되었다. 앞서 설
 
 
 
-### extends를 활용한 매개변수 제한시키기
+### extends를 활용한 제너릭 타입 제한시키기
 
 함수에서 매개변수로 매핑할 수 있는 값을 제한하듯이, 제너릭 타입에서도 매개변수를 제한할 수 있는 방법이 필요하다.
 
@@ -1352,7 +1352,7 @@ type Rows =
   | { a: number; b: number; c: number; d: number };
 ```
 
-### 
+
 
 위와 같이 string 타입이 너무 광범위해 인덱스 시그니처를 사용하는 데 문제가 있다면, 두 가지 대안이 있다.
 
@@ -1475,3 +1475,237 @@ interface ArrayLike<T> {
 ```
 
 즉, 길이와 숫자 인덱스 시그니처만 있다. 드물긴 하지만, 필요하다면 ArrayLike를 사용해야 한다. 그러나 키는 여전히 문자열이다.
+
+
+
+
+
+
+
+## 아이템 17. 변경 관련된 오류 방지를 위해 readonly 사용하기
+
+다음과 같은 코드를 보자.
+
+```tsx
+// Error
+function arraySum(arr: number[]) {
+  let sum = 0;
+  let num;
+  while ((num = arr.pop()) !== undefined) {
+    sum += num;
+  }
+  return sum;
+}
+
+function printTriangles(n: number) {
+  const nums = [];
+  for (let i = 0; i < n; i++) {
+    nums.push(i);
+    console.log(arraySum(nums));
+  }
+}
+
+```
+
+위 코드는, 의도와 달리  `0 1 2 3 4 ` 를 출력하게 된다.
+
+이는 arraySum을 호출할 때마다 pop()을 하게 되고, nums가 변경되서 그렇다.
+
+JS에서는 명시적으로 언급하지 않는 한, 함수가 매개변수를 변경하지 않는다고 가정하기 때문에 정상적으로 동작하지만, 이런 암묵적인 방법은 문제를 일으킬 수 있다.
+
+
+
+이 경우, 명시적인 방식으로 readonly를 사용하면 된다.
+
+```tsx
+// Error
+function arraySum(arr: readonly number[]) {
+  let sum = 0;
+  let num;
+  while ((num = arr.pop()) !== undefined) { // Error: pop이 존재하지 않습니다!
+    sum += num;
+  }
+  return sum;
+}
+
+function printTriangles(n: number) {
+  const nums = [];
+  for (let i = 0; i < n; i++) {
+    nums.push(i);
+    console.log(arraySum(nums));
+  }
+}
+
+printTriangles(5);
+
+```
+
+
+
+readonly 속성엔 다음과 같은 특징이 있다.
+
+* 배열의 요소를 읽을 순 있지만, 쓸 수는 없다.
+* length를 읽을 수는 있지만, 바꿀 수는 없다. 
+* 배열을 변경하는 pop을 비롯한 다른 메서드를 호출할 수 없다.
+
+
+
+위 코드에서 `readonly number[]` 임에도 매개변수로 `number[]` 를 넣을 수 있다. 이는 number[]가 더 많은 기능을 가지므로, readonly number[]의 subtype 이라고 이해하면 된다. 따라서 그 반대는 불가능하다.
+
+
+
+위 에러 코드를 고치는 방법은 간단하다. 배열을 변경하지 않으면 된다!
+
+```tsx
+// Correct
+function arraySum(arr: readonly number[]) {
+  let sum = 0;
+  for (const num of arr) {
+    sum += num;
+  }
+  return sum;
+}
+
+function printTriangles(n: number) {
+  const nums = [];
+  for (let i = 0; i < n; i++) {
+    nums.push(i);
+    console.log(arraySum(nums));
+  }
+}
+
+printTriangles(5);
+```
+
+
+
+### Readonly Generic
+
+readonly의 사촌 격이자 객체에 사용되는 Readonly 제너릭을 보자.
+
+```tsx
+interface Outer {
+  inner: {
+    x: number;
+  };
+}
+
+const o: Readonly<Outer> = { inner: { x: 0 } };
+o.inner = { x: 1 }; // Error: 읽기 전용 속성이므로 inner에 할당할 수 없다.
+o.inner.x = 3;
+
+type T = Readonly<Outer>;
+// type T = {
+//   readonly inner: {
+//       x: number;
+//   };
+// }
+```
+
+readonly는 얕게 동작한다. 따라서 접근 제어자는 inner에 적용되는 것이지 x에 적용 되지는 않는다.
+
+현재 시점엔 깊은 readonly 타입이 기본적으로 지원되지 않는다.  제너릭을 만들면 깊은 readonly를 사용할 수 있으나, 만들기 까다로우므로 라이브러리를 사용하는 것이 낫다
+
+
+
+### 인덱스 시그니처의 readonly
+
+인덱스 시그니처에도 readonly를 사용할 수 있다. 읽기는 허용하되, 쓰기를 방지하는 효과가 있다.
+
+```tsx
+let obj: Readonly<{ [k: string]: number }> = {};
+obj.hi = 45; // ERROR: Index signature in type 'Readonly<{ [k: string]: number; }>' only permits reading.
+obj = { ...obj, hi: 12 }; 
+```
+
+
+
+
+
+
+
+## 아이템 18. 매핑된 타입을 사용하여 값을 동기화하기
+
+
+
+다음 코드를 보자.
+
+```tsx
+interface ScatterProps {
+  xs: number[];
+  ys: number[];
+
+  xRange: [number, number];
+  yRange: [number, number];
+  color: string;
+
+  onClick: (x: number, y: number, index: number) => void;
+}
+
+function shouldUpdate(oldProps: ScatterProps, newProps: ScatterProps) {
+  let k: keyof ScatterProps;
+  for (k in oldProps) {
+    if (k !== "onClick" && oldProps[k] !== newProps[k]) {
+      return true;
+    }
+  }
+}
+```
+
+
+
+위 코드는, ScatterProps를 가지는 UI 컴포넌트가 props의 값이 달라지면 update 해주는 코드이다.
+
+이 때, onClick은 변경되면 다시 그릴 필요가 없으므로 패스해줘야 한다.
+
+위와 같은 shouldUpdate를 보수적 접근법, 또는 fail close 접근법이라고 한다. 이 접근법을 이용하면 정확하지만 너무 자주 그려질 가능성이 있다.
+
+
+
+두 번째 최적화 방법은 fail open 접근법이다.
+
+```tsx
+function shouldUpdate(oldProps: ScatterProps, newProps: ScatterProps) {
+  return (
+    oldProps.xs !== newProps.xs ||
+    oldProps.ys !== newProps.ys ||
+    oldProps.xRange !== newProps.xRange ||
+    oldProps.yRange !== newProps.yRange ||
+    oldProps.color !== newProps.color
+  );
+}
+```
+
+이 코드는 참조만을 비교하므로, 다시 그려야 할 경우가 누락되는 일이 벌어질 수 있다.
+
+
+
+두 가지 모두 최적화 방법이 이상적이지 않다. ScatterProps에 새로운 속성이 추가되면, 직접 shouldUpdate를 고치게 하는 것이 좋다.
+
+이 때, 매핑된 타입과 객체를 이용하면 좋다.
+
+```tsx
+const REQUIRES_UPDATE: { [k in keyof ScatterProps]: boolean } = {
+  xs: true,
+  ys: true,
+  xRange: true,
+  yRange: true,
+  color: true,
+  onClick: false
+};
+
+function shouldUpdate(oldProps: ScatterProps, newProps: ScatterProps) {
+  let k: keyof ScatterProps;
+  for (k in oldProps) {
+    if (oldProps[k] !== newProps[k] && REQUIRES_UPDATE[k]) {
+      return true;
+    }
+  }
+  return false;
+}
+```
+
+이 방법은 나중에 ScatterProps에 새로운 속성을 추가하게 되면 REQUIRES_UPDATE에 오류가 발생하게 한다.
+
+이 처럼 매핑된 타입을 이용해 타입스크립트가 코드에 제약을 강제하도록 할 수 있다.
+
