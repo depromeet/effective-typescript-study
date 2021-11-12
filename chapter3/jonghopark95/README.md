@@ -698,9 +698,112 @@ console.log(pharaoh.start);
 
 ## 아이템 24. 일관성 있는 별칭 사용하기
 
+아래 코드를 보자.
+
+```tsx
+interface Coordinate {
+  x: number;
+  y: number;
+}
+
+interface BoundingBox {
+  x: [number, number];
+  y: [number, number];
+}
+
+interface Polygon {
+  exterior: Coordinate[];
+  holes: Coordinate[][];
+  bbox?: BoundingBox;
+}
+
+function isPointInPolygon(polygon: Polygon, pt: Coordinate) {
+  if (polygon.bbox) {
+    if (
+      pt.x < polygon.bbox.x[0] ||
+      pt.x > polygon.bbox.x[1] ||
+      pt.y < polygon.bbox.y[0] ||
+      pt.y > polygon.bbox.y[1]
+    ) {
+      return false;
+    }
+  }
+}
+```
+
+Polygon은 점과 외각으로 이루어지는데, bbox는 어떤 점이 다각형에 포함되는지 파악하는 최적화 속성이다.
 
 
 
+위의 코드는 잘 동작하지만, 반복되는 구문이 동작한다.
+
+특히, polygon.bbox는 5번이나 등장한다. 이 중복을 줄이기 위해 임시 변수를 사용할 수 있다. 
+
+```tsx
+function isPointInPolygon(polygon: Polygon, pt: Coordinate) {
+  const box = polygon.bbox;
+  if (polygon.bbox) {
+    polygon.bbox; // type => Polygon.bbox?: BoundingBox
+    box;					//	type => box: BoundingBox | undefined
+    if (
+      pt.x < box.x[0] ||	//	ERROR: Object is possibly 'undefined'
+      pt.x > box.x[1] ||
+      pt.y < box.y[0] ||
+      pt.y > box.y[1]
+    ) {
+      return false;
+    }
+  }
+}
+```
+
+
+
+위 코드는 에러가 뜬다. 속성 체크는 polygon.bbox를 정제했지만, box는 그렇지 않았기 때문이다.
+
+
+
+>  ***이 에러를 막으려면 "별칭은 일관성있게 사용한다"라는 기본 원칙을 지켜야 한다.***
+
+
+
+```tsx
+function isPointInPolygon(polygon: Polygon, pt: Coordinate) {
+  const box = polygon.bbox;
+  if (box) {
+    if (
+      pt.x < box.x[0] ||
+      pt.x > box.x[1] ||
+      pt.y < box.y[0] ||
+      pt.y > box.y[1]
+    ) {
+      return false;
+    }
+  }
+}
+```
+
+타입 체커의 문제는 해결되었지만 코드를 읽는 사람에게는 문제가 남아있는데, 바로 box, bbox는 같은 값인데 다른 이름을 사용했기 때문이다.
+
+이는 객체 비구조화를 이용하면 간결하게 사용할 수 있다.
+
+```tsx
+function isPointInPolygon(polygon: Polygon, pt: Coordinate) {
+  const { bbox } = polygon;
+  if (bbox) {
+    const { x, y } = bbox;
+    if (pt.x < x[0] || pt.x > x[1] || pt.y < y[0] || pt.y > y[1]) {
+      return false;
+    }
+  }
+}
+```
+
+
+
+### 정리
+
+* 별칭은 타입스크립트가 타입을 좁히는 것을 방해한다. 따라서, 변수에 별칭을 사용할 때는 일관되게 사용해야 한다.
 
 
 
