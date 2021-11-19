@@ -82,7 +82,6 @@ function logProduct(product: Product) {
 정보가 부족해 타입 스크립트가 타입을 판단하기 어려운 상황도 존재한다. 이럴 때는 명시적 타입 구문이 필요하다.
 
 
-
 > ***이상적인 타입스크립트 코드는 함수/메서드 시그니처에 타입 구문을 포함하지만,*** 
 >
 > ***함수 내에서 생성된 지역 변수에는 타입 구문을 넣지 않는다.***
@@ -264,6 +263,8 @@ logNumber(serial);
 
 
 
+### 타입 넓히기
+
 런타임에 모든 변수는 유일한 값을 가진다.
 
 그러나, 타입스크립트가 작성된 코드를 체크하는 정적 분석 시점에 변수는 '가능한' 값들의 집합인 타입을 가진다.
@@ -272,7 +273,7 @@ logNumber(serial);
 
 변수를 초기화할 때, 타입을 명시하지 않으면 타입 체커는 타입을 결정해야 한다.
 
-> ***즉, 단일 값을 가지고 할당 간으한 값들의 집합을 유추해야 한다.***
+> ***즉, 단일 값을 가지고 할당 가능한 값들의 집합을 유추해야 한다.***
 >
 > ***타입스크립트는 이러한 과정을 ''넓히기'' 라고 부른다.***
 
@@ -327,6 +328,8 @@ mixed가 될 수 있는 타입의 후보는 상당히 많다.
 
 
 
+### 해결책
+
 타입스크립트는 넓히기의 과정을 제어할 수 있도록 몇 가지 방법을 제공한다.
 
 
@@ -340,6 +343,8 @@ const x = "x";
 let vec = { x: 10, y: 20, z: 30 };
 getComponent(vec, x);
 ```
+
+
 
 그러나 이 방법은 만능이 아니다. 배열이나 객체의 경우 여전히 문제가 발생한다.
 
@@ -356,7 +361,7 @@ v.name = "Pythagoras";
 
 v는 구체적인 정도에 따라 다양한 모습으로 추론될 수 있다.
 
-가장 구체적인 경우는 {readonly x: 1}이며, 조금 추상적인 정도는 {x: number}, 가장 추상적인 경우는 {{[key: string]: number; }}가 된다.
+**가장 구체적인 경우는 {readonly x: 1}이며, 조금 추상적인 정도는 {x: number}, 가장 추상적인 경우는 {{[key: string]: number; }}가 된다.**
 
 객체의 경우, 타입스크립트의 넓히기 알고리즘은 각 요소를 let으로 할당된 것 처럼 다룬다.
 
@@ -381,7 +386,7 @@ v는 구체적인 정도에 따라 다양한 모습으로 추론될 수 있다.
 2. 타입 체커에 추가적인 문맥을 제공하는 것이다. 
    예를 들으면 함수의 매개변수로 값을 전달하는 케이스이다.
 
-3. 마지막으로, const 단언문을 사용하는 것이다.
+3. 마지막으로, as const 단언문을 사용하는 것이다.
 
    ```tsx
    const v = {
@@ -390,16 +395,14 @@ v는 구체적인 정도에 따라 다양한 모습으로 추론될 수 있다.
    } as const;
    ```
 
-   값 뒤에 as const를 작성하면 타입스크립트는 최대한 좁은 타입으로 추론한다.
+   값 뒤에 **as const를 작성하면 타입스크립트는 최대한 좁은 타입으로 추론한다.**
 
 
-   또한 배열을 튜플 타입으로 추론할 때도 as const를 사용할 수 있다.
+또한 배열을 튜플 타입으로 추론할 때도 as const를 사용할 수 있다.
 
    ```tsx
-   const a1 = [1, 2, 3] as const; // readonly [1, 2, 3]
+const a1 = [1, 2, 3] as const; // readonly [1, 2, 3]
    ```
-
-   
 
 
 
@@ -412,7 +415,7 @@ v는 구체적인 정도에 따라 다양한 모습으로 추론될 수 있다.
 다음 코드를 보자.
 
 ```tsx
-const el = document.getElementById("foo");
+const el = document.getElementById("foo"); // HTMLElement | null
 if (el) {
   el;	//	HTMLElement
   el.innerHTML = "party time".blink();
@@ -426,12 +429,14 @@ if (el) {
 
 
 
+### 타입 좁히기의 방법
+
 타입 좁히기의 방법은 다양하다.
 
-* 분기문에서 예외를 던지거나 (throw...) 함수를 return 하기
-* instanceof 사용하기
-* 객체 내부의 속성 체크 사용하기 
-* Array.isArray와 같은 일부 내장 함수 사용하기
+* **분기문에서 예외를 던지거나 (throw...) 함수를 return 하기**
+* **instanceof 사용하기**
+* **객체 내부의 속성 체크 사용하기** 
+* **Array.isArray와 같은 일부 내장 함수 사용하기**
 
 
 
@@ -474,6 +479,7 @@ interface UploadEvent {
   filename: string;
   contents: string;
 }
+
 interface DownloadEvent {
   type: "download";
   filename: string;
@@ -484,11 +490,11 @@ type AppEvent = UploadEvent | DownloadEvent;
 function handleEvent(e: AppEvent) {
   switch (e.type) {
     case "download":
-      e;
+      e;  // 	DownloadEvent
       break;
     case "upload":
-      e;
-      break;
+      e;	//	UploadEvent
+      break;	
   }
 }
 ```
@@ -501,7 +507,7 @@ function handleEvent(e: AppEvent) {
 
 ```tsx
 function isInputElement(el: HTMLElement): el is HTMLInputElement {
-  return "value" in el;
+  return "value" in el;	//	true
 }
 
 function getElementContent(el: HTMLElement) {
@@ -543,7 +549,7 @@ const members = ["Janet", "Michael"]
   .map((who) => jackson5.find((n) => n === who))
   .filter((who) => who !== undefined);		//	const members: (string | undefined)[]
 
-console.log(members);
+console.log(members);	//	["Michael"]  => type (string | undefined)[]
 ```
 
 
@@ -558,7 +564,7 @@ const members = ["Janet", "Michael"]
   .map((who) => jackson5.find((n) => n === who))
   .filter(isDefined);
 
-console.log(members);
+console.log(members);	//	type (string)[]
 ```
 
 
@@ -628,7 +634,7 @@ spread 연산자를 사용하면 큰 객체를 한꺼번에 만들 수 있다.
 const pt = { x: 3, y: 4 };
 const id = { name: "pythagoras" };
 const namedPoint = { ...pt, ...id };
-console.log(namedPoint.name); // O
+console.log(namedPoint.name); // OK!!!
 ```
 
 
@@ -642,6 +648,7 @@ declare let hasMiddle: boolean;
 
 const firstLast = { first: "Harry", lat: "Truman" };
 const president = { ...firstLast, ...(hasMiddle ? { middle: "5" } : {}) };
+
 // Type:
 // const president: {
 //    middle?: string | undefined;
@@ -680,7 +687,6 @@ console.log(pharaoh.start);
 //   ...(hasDates ? { start: -2589, end: -2566 } : {})
 // };
 // console.log(pharaoh.start);
-
 ```
 
 위 코드 처럼 선택적 필드를 표현하려면 헬퍼 함수를 사용하면 된다.
@@ -741,7 +747,7 @@ Polygon은 점과 외각으로 이루어지는데, bbox는 어떤 점이 다각�
 
 ```tsx
 function isPointInPolygon(polygon: Polygon, pt: Coordinate) {
-  const box = polygon.bbox;
+  const box = polygon.bbox; // 	type => box: BoundingBox | undefined
   if (polygon.bbox) {
     polygon.bbox; // type => Polygon.bbox?: BoundingBox
     box;					//	type => box: BoundingBox | undefined
@@ -760,7 +766,6 @@ function isPointInPolygon(polygon: Polygon, pt: Coordinate) {
 
 
 위 코드는 에러가 뜬다. 속성 체크는 polygon.bbox를 정제했지만, box는 그렇지 않았기 때문이다.
-
 
 
 >  ***이 에러를 막으려면 "별칭은 일관성있게 사용한다"라는 기본 원칙을 지켜야 한다.***
@@ -809,19 +814,389 @@ function isPointInPolygon(polygon: Polygon, pt: Coordinate) {
 
 
 
+## 아이템 25. 비동기 코드에는 콜백 대신 async 함수 사용하기
+
+
+
+### Callback과 Promise, async / await
+
+과거 JS는 비동기 동작을 모델링하기 위해 콜백을 사용했다.
+
+이에 악명 높은 콜백 지옥이 나올 수 밖에 없었다.
+
+```tsx
+const fetchURL = (cb) => setTimeout(cb);
+
+fetchURL(() => {
+  fetchURL(() => {
+    fetchURL(() => {
+      console.log(1);
+    });
+    console.log(2);
+  });
+  console.log(3);
+});
+
+console.log(4);
+
+// 4 
+// 3
+// 2
+// 1
+```
+
+
+
+이는 실행 순서와 코드의 순서가 반대이므로, 직관적으로 이해하기 어렵다.
+
+
+
+ES6는 이를 극복하기 위해 promise 개념을 도입한다.
+
+또, ES2017에선 async, await 키워드를 도입하여 더욱 간단하게 처리하게 되었다.
+
+
+
+### 타입스크립트에서의 async, await
+
+타입스크립트는 ES5 또는 더 이전 버전을 대상으로 할 때, async await이 동작하도록 더 정교환 변환을 수행한다.
+
+이는 TS가 런타임에 관계없이 async / await 을 사용할 수 있음을 시사한다.
+
+async await 의 장점은 다음과 같다.
+
+* 콜백보다 프로미스가 코드를 작성하기 쉽다.
+* 콜백보다 프로미스가 타입을 추론하기 쉽다.
+
+
+
+다음 코드를 보자.
+
+```tsx
+async function fetchPages() {
+  // res1, res2, res3은 Response로 타입 추론된다.
+  const [res1, res2, res3] = await Promise.all([
+    fetch(url1),
+    fetch(url2),
+    fetch(url3)
+  ]);
+}
+```
+
+타입스크립트는 세 가지 response 변수 타입을 Response로 추론한다.
+
+만약, 콜백 스타일로 작성하게 된다면 더 많은 코드와 타입 구문이 필요하게 된다.
+
+
+
+Promise.race로 타입 추론과 잘 맞다.
+
+```tsx
+function timeout(millis: number): Promise<never> {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => reject("timeout"), millis);
+  });
+}
+
+// function fetchWithTimeout(url: string, ms: number): Promise<Response>
+async function fetchWithTimeout(url: string, ms: number) {
+  return Promise.race([fetch(url), timeout(ms)]);
+}
+```
+
+타입 구문이 없어도 fetchWIthTimeout의 반환 타입은 Promise<Response> 이다.
+
+이는, Promise.race의 반환 타입이 입력 타입의 유니온이고, 현 상황에서는 Promise<Response | never> 인데 never는 공집합이므로 Promise<Response>로 추론되는 것이다.
+
+
+
+### 함수는 항상 동기 또는 비동기로 실행되어야 한다.
+
+다음 코드를 보자.
+
+```tsx
+const _cache: { [url: string]: string } = {};
+function fetchWithCache(url: string, callback: (texT: string) => void) {
+  if (url in _cache) {
+    callback(_cache[url]);
+  } else {
+    fetchURL(url, (text) => {
+      _cache[url] = text;
+      callback(text);
+    });
+  }
+}
+
+function getUser(userId: string) {
+  fetchWithCache(`/user/${userId}`, (profile) => {
+    requestStatus = "success";
+  });
+
+  requestStatus = "Loading";
+}
+```
+
+만약, cache가 되어있다면 동기적으로 callback을 호출하고, 아니라면 비동기 호출을 하게 된다.
+
+getUser의 입장에서, 캐싱되어있지 않으면 Loading 후 success가 되지만,
+
+캐싱 되어 있다면 success가 되었다가 바로 loading이 된다.
+
+
+
+async를 두 함수에 모두 사용하면 일관적인 동작을 강제하게 된다.
+
+```tsx
+async function fetchWithCache(url:string){
+  if (url in _cache) {
+    return _cache[url];
+  }
+  const response = await fetch(url);
+  const text = await response.text();
+  _cache[url] = text;
+  return text;
+}
+
+async function getUser(userId: string){
+  requestStatus = 'loading';
+  const profile = await fetchWithCache(`/user/${userId}`);
+  requestStatus = 'success';
+}
+```
+
+
+
+### 콜백, Promise 보다는 async/await !!
+
+
+
+만약, Promise를 직접 생성해야 할 때, 선택의 여지가 있다면 일반적으로는 Promise 보단 async/await 을 사용해야 한다.
+
+다음을 보자.
+
+```tsx
+// const getNumber: () => Promise<number>
+
+async function getNumber() {
+  return 42;
+}
+
+const getNumber = async () => 42;
+
+const getNumber = () => Promise.resolve(42);
+```
+
+위 세 코드는 모두 같은 타입을 가진 함수이다.
+
+
+
+위의 fetch 예제와 같이 콜백, 프로미스를 사용하게 되면 실수로 반동기 코드를 작성할 수 있지만, async를 사용하면 항상 비동기 코드를 작성할 수 있게 된다.
+
+
+
+### async 함수 내에서 Promise 반환하기
+
+만약, async 함수 내에서 Promise를 반환하게 되면 또 다른 프로미스로 래핑되지 않는다.
+
+```tsx
+async function getJSON(url: string) { // function getJSON(url: string): Promise<any>
+  const response = await fetch(url);
+  const jsonPromise = response.json(); // const jsonPromise: Promise<any>
+  return jsonPromise;
+}
+```
 
 
 
 
 
+## 아이템 26. 타입 추론에 문맥이 어떻게 사용되는지 이해하기
+
+
+
+### 타입 추론에서 문맥이 어떻게 사용되는가?
+
+타입 스크립트는 타입 추론시 단순히 값만 고려하지 않는다. 값이 존재하는 곳의 문맥까지 살피게 된다.
+
+근데, 문맥을 고려해 타입을 추론하면 가끔 이상한 결과가 나온다.
+
+```tsx
+type Language = "Javascript" | "Typescript";
+
+function setLanguage(language: Language) {
+  console.log(language);
+}
+
+setLanguage("Javascript");
+let language = "Javascript";
+setLanguage(language); // Argument of type 'string' is not assignable to parameter of type 'Language'.
+```
+
+
+
+setLanguage에 문자열 리터럴로 매개변수를 넣어주는 것은 정상이다.
+
+그러나, 변수로 분리하면 타입스크립트는 할당 시점에 타입을 추론하게 되고, string은 할당할 수 없으므로 오류가 발생한다.
+
+
+
+이 에러의 해결방안은 다음 두 가지이다.
+
+1. 타입 선언에서 language의 가능한 값을 제한한다.
+
+   ```tsx
+   let language: Language = "Javascript";
+   ```
+
+   
+
+2. language를 상수로 만든다.
+
+   ```tsx
+   const language = "Javascript";
+   ```
+
+   이 방법은 사용되는 문맥으로부터 값을 분리하게 되므로, 추후에 문제를 발생시킬 수 있다.
+   아래에선 문맥의 소실로 인한 오류의 케이스를 소개하겠다.
+
+
+
+### 튜플 사용 시의 문제점
+
+튜플 사용 시에도 같은 문제가 발생한다.
+
+```tsx
+function panTo(where: [number, number]) {
+  console.log(where);
+}
+
+panTo([10, 20]);
+const loc = [10, 20];
+panTo(loc); // Argument of type 'number[]' is not assignable to parameter of type '[number, number]'.
+```
+
+
+
+이를 해결할 방법은 '상수 문맥' 을 제공하는 것이다.
+
+```tsx
+const loc = [10, 20] as const;
+panTo(loc); // Argument of type 'readonly [10, 20]' is not assignable to parameter of type '[number, number]'
+```
+
+그러나, 이는 너무 과하게 정확하다. panTo의 매개변수는 불변을 보장하진 않는다. 
+
+이를 고칠 수 있는 방안은 매개변수에 readonly를 추가하는 것이다.
+
+```tsx
+function panTo(where: readonly [number, number]) {
+  console.log(where);
+}
+
+panTo([10, 20]);
+const loc = [10, 20] as const;
+panTo(loc);
+```
+
+
+
+as const는 문맥 손실과 관련된 문제를 해결할 수 있으나, 
+만약 타입 정의에서 실수가 있었다면 오류가 타입 정의가 아닌 호출시에 발생한다. 
+
+
+
+### 객체 사용 시 주의점
+
+문맥에서 값을 분리하는 문제는 객체에서도 발생한다.
+
+```tsx
+// Object Literal
+type Language = "Javascript" | "Typescript" | "Python";
+interface GovernedLanguage {
+  language: Language;
+  organization: string;
+}
+
+function complain(language: GovernedLanguage) {
+  console.log(language);
+}
+
+complain({ language: "Typescript", organization: "Microsoft" });
+
+const ts = { language: "Typescript", organization: "Microsoft" } as const;
+complain(ts);
+```
+
+위와 같이, as const 를 추가하지 않으면 string으로 추론하게 된다.
+
+이는 as const나 타입 선언을 추가하면 된다.
+
+
+
+### 콜백 사용 시 주의점
+
+```tsx
+// Function
+function callWithRandomNumbers(fn: (n1: number, n2: number) => void) {
+  fn(Math.random(), Math.random());
+}
+
+callWithRandomNumbers((a, b) => {
+  a;
+  b;
+  console.log(a + b);
+});
+
+const fn = (a, b) => {
+  a; // Parameter 'a' implicitly has an 'any' type, but a better type may be inferred from usage.
+  b;
+  console.log(a + b);
+};
+
+callWithRandomNumbers(fn);
+```
+
+위와 같이 콜백 함수의 매개변수 추론을 위해 문맥을 사용하게 되는데,
+
+만약 값으로 뽑아내게 될 경우 문맥이 소실되고 noImplicitAny 에러가 발생한다.
+
+위와 같은 경우는 매개변수에 타입 구문을 추가하거나, 전체 함수 표현식에 타입 선언을 적용하면 된다.
 
 
 
 
 
+## 아이템 27. 함수형 기법과 라이브러리로 타입 흐름 유지하기
 
 
 
+### 타입스크립트에서의 함수형 기법들
+
+함수형 기법은 타입 정보가 그대로 유지되면서 타입 흐름이 계속 전달되도록 한다.
+
+그러나, 이를 직접 절차형으로 구현한다면 타입 체크에 대한 관리를 직접해야 한다.
 
 
+
+### 타입스크립트에서의 외부 라이브러리 함수들
+
+자바스크립트에서는 표준 라이브러리가 존재하지 않는다.
+
+많은 라이브러리가 이 역할을 대신하기 위해 만들어졌다. 그러나, JS는 의존성을 추가하기 위해 신중해야 한다.
+
+만약, 서드파티 라이브러리 기반으로 코드를 짧게 줄이는데 시간이 많이 든다면, 사용하지 않는게 나을 수도 있기 때문이다.
+
+
+
+그러나, 같은 코드를 타입스크립트로 작성하면 서드파티 라이브러리를 사용하는 것이 무조건 유리하다.
+
+타입 정보를 참고하며 작업할 수 있기 때문이다.
+
+
+
+넓게 보면, 타입스크립트의 많은 부분이 자바스크립트 라이브러리의 동작을 정확히 모델링하기 위해 개발되었다.
+
+타입 흐름을 개선하며 가독성을 높이고, 명시적인 타입 구문의 필요성을 줄이기 위해선 직접 구현하기 보단, 내장된 함수형 기법과 유틸리티 라이브러리를 사용하는 것이 좋다. 
+
+그러므로, 타입스크립트의 원래 목적을 달성하기 위해선 라이브러리를 사용할 때 타입 정보가 유지되는 점을 잘 활용해야 한다.
 
