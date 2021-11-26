@@ -17,7 +17,7 @@
 효과적으로 타입을 설계하려면, 유효한 상태만 표현할 수 있는 타입을 만들어 내는 것이 중요하다.
 
 * 유효한 상태와 무효한 상태를 둘 다 표현하는 타입은 혼란을 초래하기 쉽고, 오류를 유발하게 된다.
-* 유효한 상태만 표현하는 타입을 지향해야 한다. 
+* 유효한 상태만 표현하는 타입을 지향해야 한다.
   코드가 길어지고, 표현하기 어려워질 수 있지만 시간과 추후에 따라올 고통을 줄일 수 있다.
 
 
@@ -25,8 +25,6 @@
 ### 유효, 무효한 상태를 함께 표현하는 타입
 
 웹 애플리케이션을 만든다고 생각해보자. 애플리케이션 에서는 페이지를 선택하면, 페이지 내용을 로드하고 화면에 표시하게 된다. 이를 표현할 상태는 다음처럼 설계했다하자.
-
-
 
 ```tsx
 interface State {
@@ -553,4 +551,279 @@ type Person = Name | PersonWithBirth;
 * 타입스크립트가 제어 흐름을 분석할 수 있도록 타입에 태그를 넣는 것을 고려해야 한다. tagged union은 타입스크립트와 매우 잘 맞으므로 자주 사용하자.
 
 
+
+## 아이템 33. string 타입보다 더 구체적인 타입 사용하기
+
+
+
+### 문자열 남용을 주의해봐요
+
+string 타입의 범위는 정말 매우 넓다.
+
+"x" 같은 한 글자도, 매우 많은 소설의 내용도 string이다.
+
+string 타입을 사용할 거면 좀 더 좁은 타입이 적정하지 않은지 체크해봐야 한다.
+
+
+
+다음 타입을 보자.
+
+```tsx
+interface Album {
+  artist: string;
+  title: string;
+  releaseDate: string;		//	YYYY-MM-DD
+  recordingType: string;	//	'live' | 'studio'
+}
+```
+
+releaseDate, recordingType은 지나치게 큰 범위의 값을 수용하게 된다. 이를 다음과 같이 바꿀 수 있다.
+
+
+
+```tsx
+type RecordingType = "studio" | "live";
+
+interface Album {
+  artist: string;
+  title: string;
+  releaseDate: Date;
+  recordingType: RecordingType;
+}
+```
+
+
+
+위와 같이, 문자열이 남용된 코드를 `stringly typed` , 문자열이 남용되었다고 표현하곤 한다.
+
+
+
+### keyof 연산자
+
+위와 같은 방식을 사용하게 되면 keyof로 더 세밀하게 객체 속성 체크가 가능해진다.
+
+다음 코드를 한번 보자.
+
+```tsx
+const pluck = (records: any[], key: string): any[] => {
+  return records.map((r) => r[key]);
+};
+```
+
+
+
+pluck 함수는 배열을 받아 key에 해당하는 필드의 값만 추출하는 함수이다.
+
+이 함수의 타입은 any 타입이 있어 정밀하지 못하다. 
+
+
+
+이를 개선하기 위해 제너릭 타입을 도입해보자.
+
+```tsx
+const pluck = <T>(records: T[], key: string): any[] => {
+  return records.map((r) => r[key]); // ERROR: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'unknown'
+          
+};
+```
+
+`r[key]` 에선 key 가 string 타입이므로 unknown 한 필드에 접근할 수 없다고 한다.
+
+keyof를 사용하면 이 에러를 막을 수 있다.
+
+
+
+```tsx
+const pluck = <T>(records: T[], key: keyof T) => {
+  return records.map((r) => r[key]);
+};
+```
+
+이는 자동으로 반환값을 `T[keyof T][]` 타입으로 추론하기도 한다.
+
+
+
+문제는, key 로 하나의 문자열만 넣을 경우 너무 큰 범위로 추론한다는 것이다.
+
+```tsx
+const pluck: <Album>(records: Album[], key: keyof Album) => (string | Date)[]
+```
+
+keyof T는 'string' | Date 이므로, `T[keyof T][]` 타입은 위와 같이 추론된다.
+
+
+
+이를 막으려면 두 번째 제너릭 타입을 사용해야 한다.
+
+```tsx
+const pluck = <T, K extends keyof T>(records: T[], key: K) => {
+  return records.map((r) => r[key]);
+};
+```
+
+
+
+### 정리
+
+* string을 남발하지 말자. 더 구체적인 타입을 사용하는 것이 좋다.
+* 객체의 속성 이름을 함수 매개변수로 받고 싶다면, `keyof T` 를 사용하는 것이 좋다.
+
+
+
+
+
+## 아이템 34. 부정확한 타입보다는 미완성 타입을 사용하기
+
+
+
+### any와 unknown 의 차이
+
+다음 코드를 보자
+
+```tsx
+let value: any = 10;
+console.log(value.length);
+```
+
+any는 모든 타입을 허용하므로, 타입 검사를 느슨하게 해서 다음 에러는 나지 않게 된다.
+
+```tsx
+let value: unknown = 10;
+console.log(value.length); // ERROR: Object is of type 'unknown'.
+```
+
+
+
+그러나 다음 코드는 에러가 나게 되는데, unknown 도 모든 타입을 허용하지만 any와는 달리 프로퍼티, 또는 연산을 하게 되는 경우 컴파일러가 체크하게 된다.
+
+이를 통해 문제 되는 코드를 미리 예방할 수 있다.
+
+
+
+### 정리
+
+* 타입이 없는 것보다 잘못된 것이 더 나쁘다.
+* 정확하게 타입을 모델링할 수 없다면, 부정확하게 모델링하지 말아야 한다.
+  또, any, unknown 을 구분해서 사용할 수 있어야 한다.
+* 타입 정보를 구체적으로 만들수록 오류 메시지와 자동 완성 기능에 주의를 기울여야 한다.
+
+
+
+
+
+## 아이템 35. 데이터가 아닌, API 와 명세를 보고 타입 만들기
+
+
+
+우리가 다루는 타입 중 최소한 몇 개는 프로젝트 외부에서 비롯된 것이다.
+
+파일 형식, API, 명세들이 그것들인데, 이를 참고해 타입을 생성하면 사용자가 실수를 줄일 수 있게 도와준다.
+
+
+
+### 정리
+
+* 코드의 구석까지 타입 안전성을 얻기 위해 API 또는 데이터 형식에 대한 타입 생성을 고려해야 한다.
+* 데이터에 드러나지 않는 예외적인 경우가 있을 수 있기 때문에 데이터 보다는 명세로부터 코드를 생성하는 것이 좋다.
+
+
+
+
+
+
+
+## 아이템 36. 해당 분야의 용어로 타입 이름 짓기
+
+
+
+**타입, 속성, 변수에 이름을 붙일 때 명심해야 할 규칙이 있다.**
+
+1. 동일한 의미를 나타낼 때는 같은 용어를 사용해야 한다.
+   동음이의어를 사용하면 글을 읽을 때는 좋을 수 있지만, 코드에서는 좋지 않다.
+2. `data, info, thing, item, object, entity` 같은 모호하고 의미 없는 이름은 피해야 한다.
+   귀찮다고 무심코 의미 없는 이름을 붙여서는 안 된다.
+3. 이름을 지을 때는 포함된 내용이나 계산 방식이 아닌 **데이터 자체가 무엇인지를 고려해야 한다.**
+4. 가독성을 높이고, 추상화 수준을 높이기 위해 해당 분야의 용어를 사용해야 한다.
+
+
+
+
+
+## 아이템 37. 공식 명칭에는 상표를 붙이기
+
+```tsx
+interface Vector2D {
+  x: number;
+  y: number;
+}
+
+function calculateNorm(p: Vector2D) {
+  return Math.sqrt(p.x * p.x + p.y * p.y);
+}
+
+const test = { x: 3, y: 4, z: 1 };
+calculateNorm(test); // OK!!
+```
+
+
+
+구조적 타이핑 때문에 이는 문제가 되지 않는다. 
+
+그러나, 만약 인자로 3차원 벡터를 허용하고 싶지 않게 하려면 `nominal typing` 을 사용하면 된다.
+
+
+
+### Nominal Typing (공식 명칭)
+
+```tsx
+interface Vector2D {
+  _brand: "2d";
+  x: number;
+  y: number;
+}
+
+function calculateNorm(p: Vector2D) {
+  return Math.sqrt(p.x * p.x + p.y * p.y);
+}
+
+const test = { x: 3, y: 4, z: 1 };
+calculateNorm(test); // ERROR: rgument of type '{ x: number; y: number; z: number; }' is not assignable to parameter of type 'Vector2D'.
+```
+
+`_brand` 를 이용해 calculateNorm 이 Vector2D 만 받는 것을 보장한다.
+
+물론 `_brand` 필드를 추가함으로서 이를 우회할 수는 있지만, 이를 방지하기는 충분하다.
+
+
+
+
+
+### 응용
+
+다음 코드를 보자.
+
+```tsx
+type AbsolutePath = string & { _brand: "abs" };
+
+function isAbsolutePath(path: string): path is AbsolutePath {
+  return path.startsWith("/");
+}
+
+function listAbsolutePath(path: AbsolutePath) {
+  console.log(path);
+}
+
+function f(path: string) {
+  if (isAbsolutePath(path)) {
+    listAbsolutePath(path);
+  }
+  listAbsolutePath(path); // ERROR: Argument of type 'string' is not assignable to parameter of type 'AbsolutePath'.
+}
+```
+
+
+
+타입 시스템에서는 절대 경로를 파악하기 힘들기 때문에, 위와 같이 상표 기법을 사용할 수 있다.
+
+위 방법을 사용해, 타입 시스템에서 동작하지만 런타임에 이를 검사하는 것과 동일한 효과를 얻을 수 있다.
 
