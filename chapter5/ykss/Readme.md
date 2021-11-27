@@ -207,6 +207,20 @@ const snowLeopard: Animal = {
 
 ```typescript
 interface Vector2D {
+  x: number;
+  y: number;
+}
+function calculateNorm(p: Vector2D) {
+  return Math.sqrt(p.x * p.x + p.y * p.y);
+}
+
+calculateNorm({x: 3, y: 4});  // OK, result is 5
+const vec3D = {x: 3, y: 4, z: 1};
+calculateNorm(vec3D);  // OK! result is also 5
+```
+
+```typescript
+interface Vector2D {
   _brand: '2d';
   x: number;
   y: number;
@@ -224,7 +238,7 @@ calculateNorm(vec3D);
            // ~~~~~ Property '_brand' is missing in type...
 ```
 
-위와 같이 `_brand`를 붙이는 것을 상표(brand) 기법이라고하는데, 타입 시스템에서 동작하지만 런타임에 상표를 검사하는 것과 동일한 효과를 준다.
+위와 같이 `_brand`를 붙이는 것을 상표(brand) 기법이라고하는데, 타입 시스템에서 동작하지만 런타임에 상표를 검사하는 것과 동일한 효과를 준다. (Nominal Typing)
 
 ### 요약
 
@@ -261,7 +275,7 @@ function f2() {
 }
 ```
 
-위 상황에서 두 가지 해결책 중 `x:any`보다 `x as any`가 권장된다. 그 이유는 `any` 타입이 해당 함수의 매개면수에만 사용된 표현식이어서 다른 코드에 영향을 주지 않기 때문이다. `f1()`는 변수 `x`의 타입 자체가 `any`로 바뀌어버린다. 
+위 상황에서 두 가지 해결책 중 `x:any`보다 `x as any`가 권장된다. 그 이유는 `any` 타입이 해당 함수의 매개변수에만 사용된 표현식이어서 다른 코드에 영향을 주지 않기 때문이다. `f1()`는 변수 `x`의 타입 자체가 `any`로 바뀌어버린다. 
 
 ```typescript
 interface Foo { foo: string; }
