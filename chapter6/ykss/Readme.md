@@ -1,11 +1,11 @@
 ## 아이템 41 : any의 진화를 이해하기
 
 ```typescript
-const result = [];  // Type is any[]
-result.push('a');
-result  // Type is string[]
+const result = []; // Type is any[]
+result.push("a");
+result; // Type is string[]
 result.push(1);
-result  // Type is (string | number)[]
+result; // Type is (string | number)[]
 ```
 
 any 타입은 확장되며 진화할 수 있다. 분기에 따라서 변경될 수도 있다. 하지만 any 타입은 noImplicitaAny가 설정된 상태에서 타입이 암시적 any인 경우에만 일어난다. 명시적으로 any를 선언하면 타입이 그대로 유지된다. any 탕비의 진화는 암시적 any 타입에 어떤 값을 할당할때만 발생한다.
@@ -14,8 +14,6 @@ any 타입은 확장되며 진화할 수 있다. 분기에 따라서 변경될 �
 
 - 일반적인 타입들은 정제되기만 하는 반면, 암시적 `any`와 `any[]`타입은 진화할 수 있다. 이러한 동작을 이해할 수 있어야 한다.
 - `any`를 진화 시키는 방식보다 명시적 타입 구문을 사용하는 것이 안전한 타입을 유지하는 방법이다.
-
-
 
 ## 아이템 42 : 모르는 타입의 값에는 any 대신 unknown을 사용하기
 
@@ -33,37 +31,37 @@ any 타입은 확장되며 진화할 수 있다. 분기에 따라서 변경될 �
 > ```typescript
 > function isBook(val: unknown): val is Book {
 >   return (
->       typeof(val) === 'object' && val !== null &&
->       'name' in val && 'author' in val
+>     typeof val === "object" &&
+>     val !== null &&
+>     "name" in val &&
+>     "author" in val
 >   );
 > }
 > function processValue(val: unknown) {
 >   if (isBook(val)) {
->     val;  // Type is Book
+>     val; // Type is Book
 >   }
 > }
 > ```
 >
-> 일부 스코프에서 타입을 보장하는 런타임 검사를 수행하는 표현식으로 위와 같이 `argName is Type` 의 명제 형태로 사용되는 것이다. `타입가드의 return 값이 true이면 명제가 옳다는 것으로 인식한다`.  위에서는 아래 retrun 값이 `true` 면 `val`은 `Book`이다라고 볼 수 있다.
+> 일부 스코프에서 타입을 보장하는 런타임 검사를 수행하는 표현식으로 위와 같이 `argName is Type` 의 명제 형태로 사용되는 것이다. `타입가드의 return 값이 true이면 명제가 옳다는 것으로 인식한다`. 위에서는 아래 retrun 값이 `true` 면 `val`은 `Book`이다라고 볼 수 있다.
 
 ### 요약
 
-- `unknown` 타입은 `any` 대신 사용할  수 있는 안전한 타입이다. 어떠한 값이 있지만 그 타입을 알지 못하는 경우엔 `unknown`을 사용하면 된다.
-- 사용자가 타입 단언문이나 타입 체크를 사용하도록 강제하려면 `unknow`을 사용하면 된다.
+- `unknown` 타입은 `any` 대신 사용할 수 있는 안전한 타입이다. 어떠한 값이 있지만 그 타입을 알지 못하는 경우엔 `unknown`을 사용하면 된다.
+- 사용자가 타입 단언문이나 타입 체크를 사용하도록 강제하려면 `unknown`을 사용하면 된다.
 - `{}`,`object`,`unknown`의 차이점을 이해해야 한다.
-
-
 
 ## 아이템 43 : 몽키 패치보다는 안전한 타입을 사용하기
 
 자바스크립트의 가장 유명한 특징 중 하나는 객체와 클래스에 임의의 속성을 추가할 수 있을 만큼 유연하다는 것이다. 하지만 객체에 임의의 속성을 추가하는 것은 일반적으로 좋은 설계가 아니다. 타입스크립트까지 더하면 타입체커가 임의로 추가한 속성에 대해서 알지 못한다는 문제가 발생한다. 이 문제의 간단한 해결 방법은 `any` 단언문을 사용하는 것이지만 타입 안정성을 상실하고 언어 서비스를 사용할 수 없게 된다.
 
 ```typescript
-document.monkey = 'Tamarin';
-      // ~~~~~~ Property 'monkey' does not exist on type 'Document'
-(document as any).monkey = 'Tamarin';  // OK
-(document as any).monky = 'Tamarin';  // Also OK, misspelled
-(document as any).monkey = /Tamarin/;  // Also OK, wrong type
+document.monkey = "Tamarin";
+// ~~~~~~ Property 'monkey' does not exist on type 'Document'
+(document as any).monkey = "Tamarin"; // OK
+(document as any).monky = "Tamarin"; // Also OK, misspelled
+(document as any).monkey = /Tamarin/; // Also OK, wrong type
 ```
 
 그렇기 때문에 최선의 해결책은 document 또는 DOM으로부터 데이터를 분리하는 것이다. 객체와 데이터가 붙어 있어야만 하는 라이브러리를 사용중이거나 마이그레이션 과정 중이라면 두 가지 차선책이 있다.
@@ -76,7 +74,7 @@ interface Document {
   monkey: string;
 }
 
-document.monkey = 'Tamarin';  // OK
+document.monkey = "Tamarin"; // OK
 ```
 
 보강을 사용한 방법이 `any`보다 나은 점은 아래와 같다.
@@ -96,7 +94,7 @@ declare global {
     monkey: string;
   }
 }
-document.monkey = 'Tamarin';  // OK
+document.monkey = "Tamarin"; // OK
 ```
 
 보강은 전역적으로 적용되기 때문에 코드의 다른 부분이나 라이브러리로부터 분리 할 수 없다. 그리고 실행되는 동안 속성을 할당하면 실행 시점에서 보강을 적용할 방법이 없다.
@@ -109,7 +107,7 @@ interface MonkeyDocument extends Document {
   monkey: string;
 }
 
-(document as MonkeyDocument).monkey = 'Macaque';
+(document as MonkeyDocument).monkey = "Macaque";
 ```
 
 `MonkeyDocument`는 `Document`를 확장하기 때문에 타입 단언문은 정상이고 할당문의 타입은 안전하다. 또한 `Document` 타입을 직접 건드리지 않고도 확장하여 새로운 타입을 도입해서 모듈 영역 문제도 해결이 가능하다.
@@ -119,8 +117,6 @@ interface MonkeyDocument extends Document {
 - 전역 변수나 DOM에 데이터를 저장하지 말고, 데이터를 분리하여 사용해야 한다.
 - 내장 타입에 데이터를 저장해야하는 경우, 안전한 타입 접근법 중 하나(보강이나 사용자 정의 인터페이스로 단언)을 사용해야 한다.
 - 보강의 모듈 영역 문제를 이해해야 한다.
-
-
 
 ## 아이템 44 : 타입 커버리지를 추적하여 타입 안정성 유지하기
 
@@ -134,7 +130,7 @@ interface MonkeyDocument extends Document {
 
   @types 선언 파일로부터 `any` 타입이 전파되기 때문에 특별히 더 조심해야 한다. 절대 `any`를 사용하지 않았다 하더라도 여전히 `any` 타입은 코드 전반에 영향을 미친다.
 
-npm의 `type-coverage` 패키지를 통해 `any`를 추적할 수 있다. 
+npm의 `type-coverage` 패키지를 통해 `any`를 추적할 수 있다.
 
 ```bash
 $ npx type-coverage
@@ -146,8 +142,6 @@ $ npx type-coverage
 - 작성한 프로그램의 타입이 얼마나 잘 선언되는지 추적해야 한다. 추적을 통해 `any`의 사용을 줄여 나갈 수 있고 타입 안정성을 꾸준히 높일 수 있다.
 
 # 6장. 타입 선언과 @types
-
-
 
 ## 아이템 45 : devDependencies에 typescript와 @types 추가하기
 
@@ -164,8 +158,6 @@ npm은 세 가지 종류의 의존성을 구분해서 관리하며, 각각의 �
 - 타입스크립트를 시스템 레벨로 설치하면 안 된다. 타입스크립트를 프로젝트의 devDependencies에 포함시키고 모두 같은 버전을 사용하도록 해야된다.
 - @types 의존성은 dependencies가 아니라 devDependencies에 포함시켜야 한다. 런타입에 @types가 필요한 경우라면 별도의 작업이 필요하다.
 
-
-
 ## 아이템 46 : 타입 선언과 관련된 세 가지 버전 이해하기
 
 타입스크립트를 사용하면 세 가지 사항을 추가로 고려해야 한다.
@@ -180,31 +172,27 @@ npm은 세 가지 종류의 의존성을 구분해서 관리하며, 각각의 �
 
 1. 라이브러리를 업데이트했지만 실수로 타입 선언은 업데이트하지 않는 경우 - 라이브러리 업데이트와 관련된 새로운 기능 사용 시 타입 오류 발생
 2. 라이브러리보다 타입 선언의 버전이 최신인 경우 - 타입 체커는 최신 API를 기준으로 검사하나 실제로 쓰이는 것은 과거 버전이기 때문에 문제가 발생
-3. 프로젝트에서 사용하는 타입스크립트 버전보다 라이브러리에서 필요로하는 타입스크립트 버전이 최신인 경우 
+3. 프로젝트에서 사용하는 타입스크립트 버전보다 라이브러리에서 필요로하는 타입스크립트 버전이 최신인 경우
 4. @types 의존성이 중복되는 경우
 
 자체적인 타입 선언은 보통 `package.json`의 types 필드에서 `.d.ts` 파일을 가르키도록 되어 있다. 번들링하여 타입 선언을 하는 경우 부수적인 네 가지 문제점이 있다.
 
 1.  번들된 타입 선언에 보강 기법으로 해결할 수 없는 오류가 있는 경우
-2. 프로젝트 내의 타입 선언이 다른 라이브러리 타입 선언에 의존하는 경우
-3. 프로젝트의 과거 버전에 있는 타입 선언에 문제가 있는 경우
-4. 타입 선언의 패치 업데이트를 자주 하기 어려운 문제
+2.  프로젝트 내의 타입 선언이 다른 라이브러리 타입 선언에 의존하는 경우
+3.  프로젝트의 과거 버전에 있는 타입 선언에 문제가 있는 경우
+4.  타입 선언의 패치 업데이트를 자주 하기 어려운 문제
 
 ### 요약
 
 - @types 의존성과 관련된 세 가지 버전이 있다. 라이브러리 버전, @types 버전, 타입스크립트 버전이다.
 - 라이브러리 업데이트 시, 해당 @types 역시 업데이트 해야 한다.
-- 타입 선언을 라이브러리에 포함하는 것과 DefinitelyTyped에 공개하는 것 사이에 장단점을 이해해야 한다. 타입스크립트로 작성되었으면 자체 포함하고, 자바스크립트로 작성된 라이브러리면 타입 선언을 DefinitelyTyped에 공개하는 것이 좋다.
-
-
+- 타입 선언을 라이브러리에 포함하는 것과 DefinitelyTyped에 공개하는 것 사이에 장단점을 이해해야 한다. 타입스크립트로 작성되었으면 자체 포함하고, 자바스크립트로 작성된 라이브러리면 타입 선언을 DefinitelyTyped에 공개하는 것이 좋다. (타입스크립트 패키지는 자동으로 @types를 만들어준다.)
 
 ## 아이템 47 : 공개 API에 등장하는 모든 타입을 익스포트하기
 
 ### 요약
 
 - 공개 메서드에 등장한 어떤 형태의 타입이든 익스포트해야 한다. 어차피 라이브러리 사용자가 추출할 수 있기 때문에, 익스포트하기 쉽게 만드는 것이 좋다.
-
-
 
 ## 아이템 48 : API 주석에 TSDoc 사용하기
 
@@ -248,7 +236,6 @@ TSDoc 주석은 마크다운 형식으로 꾸며진다.
 
 ### 요약
 
-- 익스포트된 함수, 클래스, 타입에 주석을 달 때는 JSDoc/TSDoc 형태를 사용하자. JSDoc/TSDoc 형태의 주석을 달면 IDE가 주석 정보를 표시해준다. 
+- 익스포트된 함수, 클래스, 타입에 주석을 달 때는 JSDoc/TSDoc 형태를 사용하자. JSDoc/TSDoc 형태의 주석을 달면 IDE가 주석 정보를 표시해준다.
 - @param, @returns 구문과 문서 서식을 위해 마크다운을 사용할 수 있다.
 - 주석에 타입 정보를 포함하면 안 된다.
-
