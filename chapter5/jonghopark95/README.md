@@ -111,7 +111,7 @@ const config: Config = {
 
 ## 아이템 39. any를 구체적으로 변형해서 사용하기
 
-any는 JS에서 표현할 수 있는 모든 갑승ㄹ 아우르는 매우매우 큰 범위의 타입이다.
+any는 JS에서 표현할 수 있는 모든 값을 아우르는 매우매우 큰 범위의 타입이다.
 
 이는, 즉 일반적인 상황에서는 any 보다 더 구체적으로 표현할 수 있는 타입이 존재할 가능성이 크다는 점이다.
 
@@ -134,9 +134,9 @@ any는 JS에서 표현할 수 있는 모든 갑승ㄹ 아우르는 매우매우 
 
 ## 아이템 40. 함수 안으로 타입 단언문 감추기
 
-함수를 작성하다보면,
 
-외부에 드러난 타입 정의는 간단하지만 내부 로직이 복잡해 안전한 타입으로 구현하기 어려운 경우가 있다.
+
+함수를 작성하다보면, 외부에 드러난 타입 정의는 간단하지만 내부 로직이 복잡해 안전한 타입으로 구현하기 어려운 경우가 있다.
 
 
 
@@ -199,21 +199,317 @@ function cacheLast<T extends Function>(fn: T): T {
 
 
 
+## 아이템 41. any 의 진화를 이해하기
+
+> ***any 는 진화한다!!***
+
+
+
+다음 코드를 보자.
+
+```tsx
+const result = []; // any[]
+result.push("a");
+result;	//	string[]
+result.push(1);
+result;	//	(string | number)[]
+```
+
+
+
+일반적으로 타입스크립트에서 타입은 변수를 선언할 때 결정되고, 
+그 후에는 새로운 값이 추가되도록 확장할 수 없다.
+
+**그러나 any 는 예외이다.**
+
+
+
+다음과 같은 케이스 들에서 any가 진화할 수 있다.
+
+1. `any[]` 배열에 새로운 타입을 할당할 경우
+2. let 으로 선언된 `any` 타입 식별자에 새로운 값을 할당할 경우
+3. `try/catch` 블록 내에서 변술르 할당하는 경우
+
+
+
+`any` 는 `noImplicitAny` 가 설정된 상태에서 변수의 타입이 암시적으로 `any` 인 경우에만 일어난다.
+
+다음과 같이 명시적으로 `any` 를 선언하면 그대로 타입이 유지된다.
+
+```tsx
+const result: any[] = [];
+result.push("a");
+result;	//	any[]
+result.push(1);
+result;	//	any[]
+```
+
+
+
+### 암시적 any 타입의 오류
+
+암시적 any 상태인 변수에 어떤 할당도 하지 않고 사용하려고 하면 암시적 any 오류가 발생하게 된다.
+
+```tsx
+function range(start: number, limit: number) {
+  const out = []; // Variable 'out' implicitly has type 'any[]' in some locations where its type cannot be determined.
+
+  if (start === limit) {
+    return out;	//	Variable 'out' implicitly has an 'any[]' type
+  }
+}
+```
+
+
+
+any 타입의 진화는 암시적 any 에 어떤 값을 할당할 때만 발생한다.
+
+그리고, 어떤 변수가 암시적 any 상태일 때 값을 읽으려고 하면 오류가 발생한다.
 
 
 
 
 
+### 정리
+
+* 일반적인 타입은 정제되기만 하지만, 암시적 any, any[] 타입은 진화할 수 있다.
+* any 를 진화시키는 방식보다 명시적 타입 구문을 사용하는 것이 더 안전한 타입 유지 방법이다.
 
 
 
 
 
+## 아이템 42. 모르는 타입의 값에는 any 대신 unknown 을 사용하기
+
+
+
+### unknown
+
+할당 가능성의 관점에서 any 를 생각해보자.
+
+any 의 위험성은 다음 두 가지 특징에서 비롯된다.
+
+- 어떠한 타입이든 any 타입에 할당 가능하다.
+- any 타입은 어떠한 타입으로 할당 가능하다. (never 타입 제외)
+
+
+
+한 집합은 다른 집합의 부분 집합이면서 동시에 상위집합이 될수 없으므로, any 는 타입 시스템과 상충된다.
+
+
+
+unknown 은 any 대신 쓸 수 있는 타입 시스템에 부합하는 타입이다.
+
+* 어떠한 타입이든 unknown 에 할당 가능하다.
+* 그러나, unknown 타입은 어떤 타입으로도 할당 가능하지 않다.
+
+
+
+Unknown 타입 인채로 값을 사용하면 오류가 발생하며, 함수 호출이나 연산을 하려해도 에러가 난다.
+
+
+
+### 함수의 반환값 Unknown
+
+```tsx
+function parseYAML(yaml: string): any {
+  console.log(yaml);
+  return yaml;
+}
+
+interface Book {
+  name: string;
+  author: string;
+}
+
+const book = parseYAML(`
+  name: Tester
+  author: Also Tester
+`);
+
+console.log(book.title);
+book("erad");
+```
+
+
+
+위 예제에서, any 타입 할당 시 book 은 암시적 any 타입이 되고, 사용하는 곳마다 런타임 에러가 발생하게 된다.
+
+book 이 any 이므로 title 을 가진 객체일 수도 있고, function 일 수도 있다고 타입 체계가 판단해 이를 에러 검출하지 않는 것이다.
+
+
+
+그러나 unknown 을 사용하게 되면 타입 단계에서 에러가 검출되므로, 훨씬 더 안전하다.
+
+```tsx
+function parseYAML(yaml: string): unknown {
+  console.log(yaml);
+  return yaml;
+}
+
+interface Book {
+  name: string;
+  author: string;
+}
+
+const book = parseYAML(`
+  name: Tester
+  author: Also Tester
+`);
+
+console.log(book.title);	//	Object is of type 'unknown'.
+book("erad");	//	Object is of type 'unknown'.
+```
+
+
+
+### 변수 선언 unknown
+
+어떤 값이 있지만 그 타입을 모르는 경우에 unknown 을 사용한다.
+
+
+
+unknown 타입을 원하는 타입으로 변환하기 위해 다음과 같은 방법을 사용할 수 있다.
+
+1. 타입 단언
+2. instanceof 체크
+3. 사용자 정의 타입 가드 (e.g. val is Book)
+
+
+
+가끔, 다음과 같이 unknown 대신 제너릭 매개변수가 사용되는 경우도 있다.
+
+```tsx
+function safeParseYAML<T>(yaml: string): T {
+  return parseYAML(yaml); // Type 'unknown' is not assignable to type 'T'.
+//  'T' could be instantiated with an arbitrary type which could be unrelated to 'unknown'
+}
+```
+
+이는 에러가 뜨는데, 어떤 타입이 unknown 에 할당될 수는 있지만 unknown 이 T 에 할당될 수 없기 때문이다.
+
+
+
+### 단언문과 관련된 unknown
+
+```tsx
+type Foo = number;
+type Bar = string;
+
+declare const foo: Foo;
+let barAny = foo as any as Bar;
+let barUnk = foo as unknown as Bar;
+```
+
+둘 중 아래가 더 낫다. 
+
+만약, 단언문을 분리하게 되는 경우 any 는 분리하는 순간 영향력이 퍼지게 되지만, unknown 은 즉시 오류를 발생하게 된다.
+
+
+
+### {}
+
+`{}` 이나 `object` 타입도 unknown 이 나오기 전에 종종 쓰였다.
+
+그러나 느낌이 약간 다른데, object 타입은 null, undefined 를 포함하지 않기 때문이다.
+
+현재는 잘 쓰이지 않는다.
 
 
 
 
 
+## 아이템 43. 몽키 패치보다는 안전한 타입을 사용하기
 
 
+
+### 몽키 패치
+
+자바스크립트에서 유명한 특징은, 객체와 클래스에 임의의 속성을 추가할 수 있다는 점이다.
+
+```tsx
+window.monkey = "Tamarin";
+document.monkey = "Howler";
+```
+
+이는  전역 변수가 되고 전역 변수를 사용하면 은연중에 프로그램 내에서 멀리 떨어진 부분들 사이에 의존성을 만들게 된다. 이는 함수 호출 때마다 `side effect` 를 만들게 된다.
+
+일반적으로 전역 변수나 DOM 에 데이터를 저장하지 말고, 분리해서 사용해야 한다.
+
+
+
+그러나 분리할 수 없는 경우, 아래와 같은 차선책이 존재한다.
+
+
+
+### 1. interface 로 보강하기
+
+```tsx
+interface Document {
+  monkey: string;
+}
+
+document.monkey = "Tamarin";
+```
+
+위 방법이 `(document as any).monkey` 에 비해 나은데, 타입 체커가 기타 속성에 대한 에러를 잡을 수 있기 때문이다.
+
+다만 보강은 전역적으로 적용되므로, 코드의 다른 부분이나 라이브러리에서 분리할 수 없다.
+
+
+
+### 2. 더 구체적인 타입 단언문 사용하기
+
+```tsx
+interface MonkeyDocument extends Document {
+  monkey: string;
+}
+
+(document as MonkeyDocument).monkey = "Tester";
+```
+
+이는 Document 타입을 건드리지 않고 별도로 확장하므로 위의 모듈 영역 문제도 해결할 수 있다.
+
+
+
+### 정리
+
+* 몽키 패치 노노...
+* 굳이 저장해야 하는 경우 보강이나 인터페이스로 단언해야 한다.
+
+
+
+## 아이템 44. 타입 커버리지를 추적하여 타입 안전성 유지하기
+
+
+
+### any 타입이 프로그램에 존재할 수 있는 경우
+
+noImplicitAny, 명시적 타입 구문을 사용해도 any 로 부터 안전하다고 할 수 없다.
+
+그 이유는 다음과 같은데,
+
+1. 명시적 any 타입
+   - 명시적으로 any 를 사용하고, 타입 범위를 좁히고 구체적으로 만들어도 any 타입이다.
+     이는 코드 전반에 영향을 미칠 수 있다.
+2. 서드파티 타입 선언
+   * @types 선언 파일로부터 any 가 전파되므로, 특별히 조심해야 한다.
+
+
+
+### type-coverage
+
+npm의 `type-coverage` 패키지를 사용하여 any 를 추적할 수 있다.
+
+```shell
+npx type-coverage	//	any 타입 coverage 확인
+npx type-coverage --detail	//	any 타입이 있는 곳 모두 출력
+```
+
+
+
+### 정리
+
+* 작성한 프로그램의 타입이 얼마나 잘 선언되었는지 추적해야 한다.
+  추적함으로써 타입 안전성을 꾸준히 높일 수 있다.
 
