@@ -113,19 +113,232 @@ JS에는 객체 이외에 Primitive 타입 일곱가지(string, number, boolean,
 
 ## 아이템 11 : 잉여 속성 체크의 한계 인지하기
 
+타입스크립트는 타입이 명시된 변수에 객체 리터럴을 할당 할 때 해당 타입의 속성이 있는지, 그리고 그 외의 속성은 없는지 확인 한다.
+
+```typescript
+interface Room {
+  numDoors: number;
+  ceilingHeightFt: number;
+}
+const r: Room = {
+  numDoors: 1,
+  ceilingHeightFt: 10,
+  elephant: 'present',
+// ~~~~~~~~~~~~~~~~~~ Object literal may only specify known properties,
+//                    and 'elephant' does not exist in type 'Room'
+};
+```
+
+구조적 타이핑의 관점에서는 오류가 발생하지 않아야 맞다. 
+
+```typescript
+interface Room {
+  numDoors: number;
+  ceilingHeightFt: number;
+}
+const obj = {
+  numDoors: 1,
+  ceilingHeightFt: 10,
+  elephant: 'present',
+};
+const r: Room = obj;  // OK
+```
+
+위 방식으로 하면 타입 체커에 문제 없이 통과한다. 위 두 예제의 차이는 첫 번째 예제에서는 잉여 속성 체크라는 과정이 수행되었다. 하지만 잉여 속성 체크라는 것은 두 번째 예제처럼 조건에 따라 동작하지 않을 수도 있다. 잉여 속성 체크가 할당 가능 검사와는 별도의 과정이라는 것을 알아야 한다. 
+
+잉여 속성 체크를 원하지 않으면, 인덱스 시그니처를 사용해서 타입스크립트가 추가적인 속성을 예상하도록 할 수 있다.
+
+```typescript
+interface Options {
+  darkMode?: boolean;
+  [otherOptions: string]: unknown;
+}
+const o: Options = { darkmode: true };  // OK
+```
+
+### 요약
+
+- 객체 리터럴을 변수에 할당하거나 함수에 매개변수로 전달할 때 잉여 속성 체크가 수행된다.
+- 잉여 속성 체크는 오류를 찾는 효과적인 방법이지만, 타입스크립트 타입 체커가 수행하는 일반적인 구조적 할당 가능성 체크와 역할이 다르다. 할당의 개념을 정확히 알아야 잉여 속성 체크와 일반적인 구조적 할당 가능성 체크를 구분할 수 있다.
+- 잉여 속성 체크에는 한계가 있다. 임시 변수를 도입하면 잉여 속성 체크를 건너 뛸 수 있다.
+
 
 
 ## 아이템 12 : 함수 표현식에 타입 적용하기
+
+JS에서는 함수 문장과 표현식을 다르게 인식한다.
+
+```typescript
+function rollDice1(sides: number): number { /* COMPRESS */ return 0; /* END */ }  // Statement
+const rollDice2 = function(sides: number): number { /* COMPRESS */ return 0; /* END */ };  // Expression
+const rollDice3 = (sides: number): number => { /* COMPRESS */ return 0; /* END */ };  // Also expression
+```
+
+타입스크립트에서는 함수의 매개변수부터 반환값까지 전체를 함수 타입으로 선언하여 함수 표현식에 재사용 할 수 있기 때문에 함수 표현식을 사용하는 것이 좋다.
+
+```typescript
+type DiceRollFn = (sides: number) => number;
+const rollDice: DiceRollFn = sides => { /* COMPRESS */ return 0; /* END */ };
+```
+
+함수 타입의 선언은 불필요한 코드의 반복을 줄이고, 반복되는 함수 시그니처를 하나의 함수 타입으로 통합할 수도 있다.
+
+```typescript
+type BinaryFn = (a: number, b: number) => number;
+const add: BinaryFn = (a, b) => a + b;
+const sub: BinaryFn = (a, b) => a - b;
+const mul: BinaryFn = (a, b) => a * b;
+const div: BinaryFn = (a, b) => a / b;
+```
+
+라이브러리의 경우에는 공통 콜백 함수를 위한 공통 함수 시그니처를 타입으로 제공하는 것이 좋다. 아래 `fetch`의 예시처럼 시그니처가 일치하는 다른 함수가 있을 때도 함수 표현식에 타입을 적용해 볼 만하다. 
+
+```typescript
+const checkedFetch: typeof fetch = async (input, init) => {
+  const response = await fetch(input, init);
+  if (!response.ok) {
+    throw new Error('Request failed: ' + response.status);
+  }
+  return response;
+}
+```
+
+### 요약
+
+- 매개변수나 반환 값에 타입을 명시하기보다 함수 표현식 전체에 타입 구문을 적용하는 것이 좋다.
+- 만약 같은 타입 시그니처를 반복적으로 작성한 코드가 있다면 함수 타입을 분리해 내거나 이미 존재하는 타입을 찾아야 한다. 라이브러리를 직접 만들면 공통 콜백에 타입을 제공해야 한다.
+- 다른 함수의 시그니처를 참조하려면 `typeof fn`을 사용하면 된다.
 
 
 
 ## 아이템 13 : 타입과 인터페이스의 차이점 알기
 
+```typescript
+type TState = {
+  name: string;
+  capital: string;
+}
+interface IState {
+  name: string;
+  capital: string;
+}
+```
+
+TS에서 명명된 타입(named type)을 정의하는 두 가지 방법이 있고 대부분의 경우 둘 다 사용해도 무방하다. 하지만 타입과 인터페이스 사이에 존재하는 차이를 분명히 알고, 같은 상황에서는 동일한 방법으로 명명된 타입을 정의해 일관성을 유지해야 한다. 그러기 위해 하나의 타입에 대해 두 가지 방법으로 모두 정의할 줄 알아야 한다.
+
+먼저 공통점에 대해서 살펴보면, 인덱스 시그니처는 두 방식 모두에서 사용 가능하다.
+
+```typescript
+type TDict = { [key: string]: string };
+interface IDict {
+  [key: string]: string;
+}
+```
+
+함수 타입도 또한 인터페이스나 타입 모두 정의할 수 있다.
+
+```typescript
+type TFn = (x: number) => string;
+interface IFn {
+  (x: number): string;
+}
+
+const toStrT: TFn = x => '' + x;  // OK
+const toStrI: IFn = x => '' + x;  // OK
+```
+
+타입 별칭과 인터페이스 모두 제너릭이 가능하다.
+
+```typescript
+type TPair<T> = {
+  first: T;
+  second: T;
+}
+interface IPair<T> {
+  first: T;
+  second: T;
+}
+```
+
+인터페이스는 타입을 확장할 수 있고(주의사항이 몇가지 있다), 타입은 인터페이스를 확장할 수 있다. 
+
+```typescript
+type TState = {
+  name: string;
+  capital: string;
+}
+interface IState {
+  name: string;
+  capital: string;
+}
+interface IStateWithPop extends TState {
+  population: number;
+}
+type TStateWithPop = IState & { population: number; };
+```
+
+여기서 주의할 것은 인터페이스는 유니온 타입 같은 복잡한 타입을 확장하지는 못한다는 것이다. 복잡한 타입을 확장하고 싶다면 타입과 `&`를 사용해야 한다. 
+
+차이점을 살펴보면, 유니온 타입은 있지만, 유니온 인터페이스라는 개념은 없다. `type AorB = 'a' | 'b';`
+
+인터페이스는 타입을 확장할 수 있지만, 유니온은 할 수 없다. 하지만 유니온 타입을 확장하는게 필요할 때가 있다. 
+
+```typescript
+type Input = { /* ... */ };
+type Output = { /* ... */ };
+interface VariableMap {
+  [name: string]: Input | Output;
+}
+type NamedVariable = (Input | Output) & { name: string };
+```
+
+이 타입은 인터페이스로 표현할 수 없다. `type` 키워드는 일반적으로 `interface`보다 쓰임새가 많다. `type` 키워드는 유니온이 될 수 있고, 매핑된 타입 또는 조건부 타입 같은 고급 기능에 활용되기도 한다. 튜플과 배열도 `type`키워드로 더 간결하게 표현 가능하다.
+
+```typescript
+type Pair = [number, number];
+type StringList = string[];
+type NamedNums = [string, ...number[]];
+```
+
+인터페이스도 튜플과 비슷하게 구현할 수 있으나, 튜플에서 사용하는 `concat`과 같은 메서드를 사용할 수 없다. 그래서 `type`으로 구현하는 편이 낫다. 
+
+반대로 인터페이스에는 타입에 없는 몇가지 기능이 있다. 그것은 **보강(augment)**이다. 보강의 예시는 아래와 같다.
+
+```typescript
+interface IState {
+  name: string;
+  capital: string;
+}
+interface IState {
+  population: number;
+}
+const wyoming: IState = {
+  name: 'Wyoming',
+  capital: 'Cheyenne',
+  population: 500_000
+};  // OK
+```
+
+위와 같은 속성의 확장을 **선언 병합(declaration merging)** 이라고 한다. 병합은 선언과 마찬가지로 일반적인 코드에서 지원되므로 언제 병합이 가능한지 알아야 한다. 타입은 기존 타입에 추가적인 보강이 없는 경우에만 사용해야 한다.
+
+### 정리
+
+- 복잡한 타입이라면 타입 별칭을 사용하자
+- 프로젝트의 일관성에 따라 인터페이스와 타입을 사용하면 된다
+- API에 대한 타입 선언을 작성해야 하면 인터페이스를 사용하는 편이 API가 변경될 때 사용자가 인터페이스를 통해 새로운 필드를 병합할 수 있어 유용하다.
+- 프로젝트 내부로 사용되는 타입에 선언 병합이 발생하는 것은 잘못된 설계이기 때문에 타입을 사용하자.
+
+### 요약
+
+- 타입과 인터페이스의 차이점과 공통점을 이해해야 한다.
+- 한 타입을 `type`과 `interface` 모두로 표현할 수 있어야 한다.
+- 프로젝트에서 어떤 문법을 사용할지 정할땐 일관된 스타일을 확립하고 보강이 필요한지 여부를 고려해야 한다.
+
 
 
 ## 아이템 14 : 타입 연산과 제너릭 사용으로 반복 줄이기
 
-
+ 
 
 ## 아이템 15 : 동적 데이터에 인덱스 시그니처 사용하기
 
@@ -133,5 +346,46 @@ JS에는 객체 이외에 Primitive 타입 일곱가지(string, number, boolean,
 
 ## 아이템 16 : number 인덱스 시그니처보다는 Array, 튜플, ArrayLike를 사용하기
 
+자바스크립트의 암시적 타입 강제는 악명 높기로 유명한데 대부분 `===`과 `!==`를 사용해서 해결이 가능하다. 자바스크립트에서 객체란 키/값 쌍의 모음이다. 키는 보통 문자열이고 값은 어떤 것도 가능하다. 숫자는 키로 사용할 수 없다. 속성 이름을 숫자로 사용하려고 하면 문자열로 변환된다. 
 
+타입스크립트에서는 숫자 키를 허용하고, 문자열 키와 다른 것으로 인식한다. `Array`의 타입 선언은 다음과 같다.
+
+```typescript
+interface Array<T> {
+  //...
+  [n:number] : T;
+}
+```
+
+배열을 순회할 때, 인덱스에 신경 쓰지 않으면 `for of`를 사용하는 것이 좋고, 인덱스의 타입이 중요하면 `foreach()`를 사용하는 것이 좋다. 그리고 루프 중간에 멈춰야 하면 `for(;;)`루프를 사용하는 것이 좋다.
+
+인덱스 시그니처가 `number`로 표현되어있어 입력한 값이 `number`여야 하는 것은 맞지만, 실제 런타임에 사용되는 키는 `string`타입 이다. 이 부분이 혼란스러울 수 있다. 그게 오히려 타입스크립트를 잘 이해하고 구조적인 고려를 하고 있다는 의미이기도 하다.
+
+어떤 길이를 가지는 배열과 비슷한 형태의 튜플을 사용하고 싶으면 타입스크립트에 있는 `ArrayLike` 타입을 사용한다.
+
+```typescript
+const xs = [1, 2, 3];
+function checkedAccess<T>(xs: ArrayLike<T>, i: number): T {
+  if (i < xs.length) {
+    return xs[i];
+  }
+  throw new Error(`Attempt to access ${i} which is past end of array.`)
+}
+```
+
+이 예제는 길이와 숫자 인덱스 시그니처만 있다. 필요한 경우 `ArrayLike`를 사용하면되지만 키는 여전히 문자열이라는 것을 잊지 말아야 한다.
+
+```typescript
+const xs = [1, 2, 3];
+const tupleLike: ArrayLike<string> = {
+  '0': 'A',
+  '1': 'B',
+  length: 2,
+};  // OK
+```
+
+### 요약
+
+- 배열은 객체이므로 키는 숫자가 아니라 문자열이다. 인덱스 시그니처로 사용된 `number` 타입은 버그를 잡기 위한 순수 타입스크립트 코드이다.
+- 인덱스 시그니처에 `number`를 사용하기 보다 `Array`나 튜플, 또는 `ArrayLike`타입을 사용하는게 좋다.
 
