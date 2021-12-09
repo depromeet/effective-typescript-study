@@ -338,9 +338,361 @@ const wyoming: IState = {
 
 ## 아이템 14 : 타입 연산과 제너릭 사용으로 반복 줄이기
 
- 
+ ```typescript
+ console.log('Cylinder 1 x 1 ',
+   'Surface area:', 6.283185 * 1 * 1 + 6.283185 * 1 * 1,
+   'Volume:', 3.14159 * 1 * 1 * 1);
+ console.log('Cylinder 1 x 2 ',
+   'Surface area:', 6.283185 * 1 * 1 + 6.283185 * 2 * 1,
+   'Volume:', 3.14159 * 1 * 2 * 1);
+ console.log('Cylinder 2 x 1 ',
+   'Surface area:', 6.283185 * 2 * 1 + 6.283185 * 2 * 1,
+   'Volume:', 3.14159 * 2 * 2 * 1);
+ ```
+
+위 코드에는 반복이 너무 많다. 위 코드에서 함수, 상수, 루프의 반복을 제거해서 코드를 아래와 같이 개선할 수 있다.
+
+```typescript
+const surfaceArea = (r,h) => 2 * Math.PI * r * (r+h);
+const volume = (r,h) => Math.PI * r * r * h;
+for (const [r,h] of [[1,1], [1,2], [1,3]]) {
+  console.log(
+  `Cylinder ${r} x ${h}`,
+  `Surface area: ${surfaceArea(r,h)}`,
+  `Volume: ${volume(r,h)}`);
+}
+```
+
+위 같이 줄인게 같은 코드를 반복하지 말라는 `DRY(don't repeat yourself)` 원칙이다. 하지만 이렇게 반복을 줄이다가 타입을 간과할 수 있다. 타입 중복은 코드 중복만큼이나  많은 문제를 발생시킨다. 그렇기 때문에 타입 간에 매핑하는 방법을 익히면 타입 정의에서도 DRY의 장점을 적용할 수 있다. 반복을 줄이는 가장 간단한 방법은 타입에 이름을 붙히는 것이다.  
+
+```typescript
+function distance(a: {x: number, y: number}, b: {x: number, y: number}) {
+  return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+}
+// 타입에 이름 붙히기
+interface Point2D {
+  x: number;
+  y: number;
+}
+function distance(a: Point2D, b: Point2D) { /* ... */ }
+```
+
+몇몇 함수가 같은 타입 시그니처를 공유하고 있다면, 해당 시그니처를 명명된 타입으로 분리해낼 수 있다.
+
+```typescript
+// HIDE
+interface Options {}
+// END
+type HTTPFunction = (url: string, options: Options) => Promise<Response>;
+const get: HTTPFunction = (url, options) => { /* COMPRESS */ return Promise.resolve(new Response()); /* END */ };
+const post: HTTPFunction = (url, options) => { /* COMPRESS */ return Promise.resolve(new Response()); /* END */ };
+```
+
+그리고 인터페이스를 확장해서 쓰면 반복을 많이 제거 할 수 있다.
+
+```typescript
+interface Person {
+  firstName: string;
+  lastName: string;
+}
+
+interface PersonWithBirthDate extends Person {
+  birth: Date;
+}
+```
+
+이미 존재하는 타입을 확장하는 경우 인터섹션 연산자(`&`)를 사용할 수도 있다. 이러한 방식은 유니온 타입(확장할 수 없는)에 속성을 추가하려고 할 때, 유용하다.
+
+```typescript
+interface Person {
+  firstName: string;
+  lastName: string;
+}
+type PersonWithBirthDate = Person & { birth: Date };
+```
+
+전체 애플리케이션의 상태를 표현하는 경우를 보자.
+
+```typescript
+interface State {
+  userId: string;
+  pageTitle: string;
+  recentFiles: string[];
+  pageContents: string;
+}
+interface TopNavState {
+  userId: string;
+  pageTitle: string;
+  recentFiles: string[];
+}
+```
+
+여기서는 `TopNavState`를 확장해서 `State`를  구성하기 보다 `State`의 부분 집합으로 `TopNavState`를 정의하는 것이 낫다. 이렇게 해서 전체 앱의 상태를 하나의 인터페이스로 유지할 수 있게 해준다. `State`를 인덱싱해서 속성의 타입에서 중복을 제거할 수 있다.
+
+```typescript
+interface State {
+  userId: string;
+  pageTitle: string;
+  recentFiles: string[];
+  pageContents: string;
+}
+type TopNavState = {
+  userId: State['userId'];
+  pageTitle: State['pageTitle'];
+  recentFiles: State['recentFiles'];
+};
+```
+
+하지만 여전히 코드상 중복적인 느낌이 있다. `State` 내의 `pageTitle` 속성의 타입이 바뀌면 `TopNavState`에도 반영된다. 여기서 매핑된 타입을 사용하면 중복을 더 줄일 수 있다.
+
+```typescript
+interface State {
+  userId: string;
+  pageTitle: string;
+  recentFiles: string[];
+  pageContents: string;
+}
+type TopNavState = {
+  [k in 'userId' | 'pageTitle' | 'recentFiles']: State[k]
+};
+```
+
+매핑된 타입은 배열의 필드를 루프 도는 것과 같은 방식이고, 이 패턴은 `Pick`이라는 표준 라이브러리에서도 찾을 수 있다.
+
+```typescript
+interface State {
+  userId: string;
+  pageTitle: string;
+  recentFiles: string[];
+  pageContents: string;
+}
+type TopNavState = Pick<State, 'userId' | 'pageTitle' | 'recentFiles'>;
+```
+
+여기서 `Pick`은 제너릭 타입이고 함수를 호출하는 것과 마찬가지로 생각하면 된다. 함수에서 매개변수 받아서 사용하듯 `Pick`은 `T`와 `K` 두 가지 타입을 받아서 결과 타입을 반환한다.
+
+태그된 유니온에서도 중복이 발생할 수 있다.
+
+```typescript
+interface SaveAction {
+  type: 'save';
+  // ...
+}
+interface LoadAction {
+  type: 'load';
+  // ...
+}
+type Action = SaveAction | LoadAction;
+type ActionType = 'save' | 'load';  // Repeated types!
+```
+
+여기서 `Action` 유니온을 인덱싱하면 타입 반복 없이 `ActionType` 정의가 가능하다.
+
+```typescript
+type ActionType = Action['type'];  // Type is "save" | "load"
+```
+
+클래스를 정의할 때, `update` 메서드의 경우에는 생성자와 동일한 매개 변수이나, 선택적 필드가 된다. 이런 경우에 `keyof`를 사용할 수도 있고, `Partial`이라는 유틸리티 타입을 사용하면 된다.
+
+```typescript
+interface Options {
+  width: number;
+  height: number;
+  color: string;
+  label: string;
+}
+type OptionsKeys = keyof Options;
+// Type is "width" | "height" | "color" | "label"
+
+interface Options {
+  width: number;
+  height: number;
+  color: string;
+  label: string;
+}
+class UIWidget {
+  constructor(init: Options) { /* ... */ }
+  update(options: Partial<Options>) { /* ... */ }
+}
+```
+
+값의 형태에 따라 해당 하는 타입을 정의할 떄는 `typeof`를 사용하면 된다. 값으로 부터 타입을 만들 때는 선언의 순서에 주의해서, 타입 정의를 먼저하고 값이 그 타입에 할당 가능하다고 선언하는 것이 좋다. 그래야 타입이 더 명확해지고, 예상하기 어려운 타입 변동을 방지할 수 있다.
+
+```typescript
+const INIT_OPTIONS = {
+  width: 640,
+  height: 480,
+  color: '#00FF00',
+  label: 'VGA',
+};
+type Options = typeof INIT_OPTIONS;
+```
+
+함수나 메서드의 반환 값에 명명된 타입을 사용할 때도 있다. 
+
+```typescript
+function getUserInfo(userId: string) {
+  // COMPRESS
+  const name = 'Bob';
+  const age = 12;
+  const height = 48;
+  const weight = 70;
+  const favoriteColor = 'blue';
+  // END
+  return {
+    userId,
+    name,
+    age,
+    height,
+    weight,
+    favoriteColor,
+  };
+}
+// Return type inferred as { userId: string; name: string; age: number, ... }
+```
+
+반환 타입에 대한 부분도 표준 라이브러리에 제너릭 타입이 설정되어있다. `ReturnType` 제너릭을 사용하면 된다. 
+
+```typescript
+type UserInfo = ReturnType<typeof getUserInfo>
+```
+
+`ReturnType`은 함수의 값인 `getUserInfo`가 아니라 함수의 타입인 `typeof getUserInfo`에 적용되었다. 이런건 적용 대상이 값인지 타입인지 정확히 알아야 한다.
+
+제너릭 타입은 타입을 위한 함수와 같다. 제너릭 타입에서 매개변수를 제한할 수 있는 방법은 `extends`를 사용하는 것이다. 
+
+```typescript
+interface Name {
+  first: string;
+  last: string;
+}
+type DancingDuo<T extends Name> = [T, T];
+
+const couple1: DancingDuo<Name> = [
+  {first: 'Fred', last: 'Astaire'},
+  {first: 'Ginger', last: 'Rogers'}
+];  // OK
+const couple2: DancingDuo<{first: string}> = [
+                       // ~~~~~~~~~~~~~~~
+                       // Property 'last' is missing in type
+                       // '{ first: string; }' but required in type 'Name'
+  {first: 'Sonny'},
+  {first: 'Cher'}
+];
+```
+
+`{first: string}`은 `Name`을 확장하지 않기 때문에 오류가 발생한다. 
+
+### 요약 
+
+- DRY(don't repeat yourself) 원칙을 타입에도 적용해야 한다.
+- 타입에 이름을 붙여서 반복을 피해야 한다. `extends`를 사용해서 인터페이스 필드의 반복을 피해야 한다.
+- 타입들간 매핑을 위해 TS가 제공한 도구들을 공부하면 좋다. `keyof`, `typeof`, 인덱싱, 매핑된 타입이 포함된다.
+- 제너릭 타입은 타입을 위한 함수와 같다. 타입을 반복하는 대신 제너릭 타입을 사용하여 타입들 간에 매핑을 하는 것이 좋다. 제너릭 타입을 제한하려면 `extends`를 사용하자.
+- 표준 라이브러리에 정의된 `Pick, Partial, ReturnType` 같은 제너릭 타입에 익숙해져야 한다.
+
+
 
 ## 아이템 15 : 동적 데이터에 인덱스 시그니처 사용하기
+
+타입스크립트에서는 타입에 **인덱스 시그니처**를 명시하여 유연하게 매핑을 표현할 수 있다.
+
+```typescript
+type Rocket = {[property: string]: string};
+const rocket: Rocket = {
+  name: 'Falcon 9',
+  variant: 'v1.0',
+  thrust: '4,940 kN',
+};  // OK
+```
+
+`[property: string] : string`이 인덱스 시그니처이고, 세 가지 의미를 담고 있다.
+
+- 키의 이름 : 키의 위치만 표시하는 용도다. 타입 체커에서는 사용하지 않는다.
+- 키의 타입 : string이나 number 또는 symbol의 조합이어야 하지만, 보통 string을 사용한다.
+- 값의 타입 : 어떤 것이든 가능하다.
+
+위와 같이 타입 체크가 수행되며 네 가지 단점이 드러난다.
+
+- 잘못된 키를 포함해 모든 키를 허용한다. `name` 대신 `Name`으로 작성해도 유효한 `Rocket`타입이 된다.
+- 특정 키가 필요하지 않다. `{}`도 유효한 `Rocket` 타입이다.
+- 키마다 다른 타입을 가질 수 있다.
+- TS 언어 서비스는 다음과 같은 경우 도움이 되지 못한다. `name:`을 입력할 때, 키는 무엇이든 가능하기 때문에 자동 완성 기능이 동작하지 않는다.
+
+결론적으로 인덱스 시그니처는 부정확하기 때문에더 나은 방법을 찾아야 한다. 예를 들어 인터페이스여야 더 나을 수 있다. 
+
+```typescript
+interface Rocket {
+  name: string;
+  variant: string;
+  thrust_kN: number;
+}
+const falconHeavy: Rocket = {
+  name: 'Falcon Heavy',
+  variant: 'v1',
+  thrust_kN: 15_200
+};
+```
+
+인덱스 시그니처는 동적 데이터를 표현할 때 사용한다. CSV 파일처럼 행과 열에 이름이 있고 ,데이터 행을 열 이름과 값으로 매핑하는 객체로 나타내고 싶을 때 사용한다.
+
+```typescript
+function parseCSV(input: string): {[columnName: string]: string}[] {
+  const lines = input.split('\n');
+  const [header, ...rows] = lines;
+  return rows.map(rowStr => {
+    const row: {[columnName: string]: string} = {};
+    rowStr.split(',').forEach((cell, i) => {
+      row[header[i]] = cell;
+    });
+    return row;
+  });
+}
+```
+
+일반적인 경우 열 이름이 무엇인지 미리 알 수 없는데, 그때 인덱스 시그니처를 사용한다. 미리 알 경우에는 미리 선언해 둔 타입으로 단언문을 사용한다.
+
+연관 배열(associative array)의 경우, 객체에 인덱스 시그니처를 사용하는 대신 `Map` 타입을 사용하는 것을 고려할 수 있다. 어떤 타입에 가능한 필드가 제한되어 있는 경우라면 인덱스 시그니처로 모델링하지 말아야 한다. 그럴 땐 선택적 필드 또는 유니온 타입으로 모델링해야 한다. 
+
+```typescript
+interface Row1 { [column: string]: number }  // Too broad
+interface Row2 { a: number; b?: number; c?: number; d?: number }  // Better
+type Row3 =
+    | { a: number; }
+    | { a: number; b: number; }
+    | { a: number; b: number; c: number;  }
+    | { a: number; b: number; c: number; d: number };
+```
+
+`string` 타입이 광범위해서 인덱스 시그니처가 문제가 있다면, `Record`를 사용하는 방법이 있다. `Record`는 키 타입에 유연성을 제공하는 제너릭 타입이다. 특히 `string`의 부분 집합을 사용할 수 있다.
+
+```typescript
+type Vec3D = Record<'x' | 'y' | 'z', number>;
+// Type Vec3D = {
+//   x: number;
+//   y: number;
+//   z: number;
+// }
+```
+
+두 번째 방법은 매핑된 타입을 사용하는 것이다. 매핑된 타입은 키마다 별도의 타입을 사용하게 해준다.
+
+``` typescript
+type Vec3D = {[k in 'x' | 'y' | 'z']: number};
+// Same as above
+type ABC = {[k in 'a' | 'b' | 'c']: k extends 'b' ? string : number};
+// Type ABC = {
+//   a: number;
+//   b: string;
+//   c: number;
+// }
+```
+
+### 요약
+
+- 런타임 때까지 객체의 속성을 알 수 없을 경우에만 인덱스 시그니처를 사용한다.
+- 안전한 접근을 위해 인덱스 시그니처의 값 타입에 `undefined`를 추가하는 것을 고려해야 한다.
+- 가능하면 인터페이스, Record, 매핑된 타입 같은 인덱스 시그니처보다 정확한 타입을 사용하는게 좋다.
 
 
 
