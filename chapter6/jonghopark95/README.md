@@ -213,3 +213,349 @@ TSDoc 은 마크다운 형식으로 꾸며지므로, 다양한 마크다운 문�
 
 * 주석에 타입 정보를 포함하지 말자.
 
+
+
+
+
+## 아이템 49. 콜백에서 this에 대한 타입 제공하기
+
+
+
+### JS 에서의 this
+
+JS 에서 this 는 매우 혼란스러운 기능이다.
+
+`let, const` 는 `lexical scope` 이지만, `this` 는 `dynamic scope` 이다.
+
+즉, 정의된 방식이 아닌 호출된 방식에 따라 달라진다.
+
+
+
+this 는 객체의 현재 인스턴스를 참조하는 클래스에서 가장 많이 쓰인다.
+
+
+
+아래 코드를 보자.
+
+```tsx
+class C {
+  vals = [1, 2, 3];
+  logSquares() {
+    for (const val of this.vals) {
+      console.log(val * val);
+    }
+  }
+}
+
+const c = new C();
+c.logSquares();
+
+const c = new C();
+const method = c.logSquares;
+method(); // ERROR!!
+```
+
+
+
+위 두개의 실행 결과는 다른데, 이는 `c.logSquares()` 가 두 가지 작업을 수행하기 때문에 그렇다.
+
+1. C.prototype.logSquares 를 호출한다.
+2. this 의 값을 c 로 바인딩한다.
+
+
+
+즉, c.logSquares 를 사용하며 this 는 undefined 가 되고, vals 를 호출할 수 없게 된다.
+
+이를 제어하기 위해선 call 으로 명시적으로 this 를 바인딩 해야 한다.
+
+
+
+### 타입스크립트 에서의 this
+
+만약, 작성 중인 라이브러리에 this 를 사용하는 콜백 함수가 있다면, this 바인딩 문제를 고려해야 한다.
+
+```tsx
+function addKeyListener(
+  el: HTMLElement,
+  fn: (this: HTMLElement, e: KeyboardEvent) => void
+) {
+  el.addEventListener("keydown", (e) => {
+    fn(e); // Error: The 'this' context of type 'void' is not assignable to method's 'this' of type 'HTMLElement'.
+    fn(el, e); // Error: Expected 1 arguments, but got 2.
+    fn.call(el, e); // OK!
+  });
+}
+```
+
+
+
+콜백 함수에서 첫 번째 매개변수에 있는 this 는 특별하게 처리된다. 
+
+위 예제에서, `fn(el, e)` 와 같이 호출하면 이를 확인할 수 있다.
+
+
+
+또, 매개변수에 this 를 추가하면 this 바인딩이 체크되므로 실수를 방지할 수 있다.
+
+`fn(e)` 를 확인해보면 이를 확인할 수 있다.
+
+
+
+## 아이템 50. 오버로딩 타입보다는 조건부 타입을 사용하기
+
+
+
+다음 코드를 보자.
+
+```tsx
+function double(x: number | string): number | string;
+function double(x: any) {
+  return x + x;
+}
+
+const num = double(12);
+console.log(num);
+```
+
+
+
+이는 number 를 넣었을 경우는 number, string 은 string 을 반환하길 원하지만
+
+number 를 넣었을 때 string 을 넣는 경우도 포함되게 된다.
+
+
+
+제너릭을 사용하면 이를 모델링할 수 있다.
+
+```tsx
+function double<T extends number | string>(x: T): T;
+function double(x: any) {
+  return x + x;
+}
+
+const num = double("x");
+console.log(num);
+```
+
+단, 이는 너무 타입이 과하게 구체적이다.
+
+'x' 를 넘기면 'xx'를 기대하게 되지만, num의 타입은 'x' 가 된다.
+
+
+
+타입스크립트에서 함수 구현체는 하나이지만, 타입 선언은 몇 개든지 만들 수 있으므로 이를 활용하여 double 을 개선할 수 있다.
+
+```tsx
+function double(x: number): number;
+function double(x: string): string;
+function double(x: any) {
+  return x + x;
+}
+
+const num = double("x");
+console.log(num);
+```
+
+
+
+그러나, 위 경우에도 버그는 남아 있게 된다.
+
+string 이나 number 타입으로는 잘 동작하지만, 유니온 타입에서는 문제가 발생한다.
+
+```tsx
+function double(x: number): number;
+function double(x: string): string;
+function double(x: any) {
+  return x + x;
+}
+
+function f(x: number | string) {
+  return double(x); // ERROR!!
+}
+```
+
+타입스크립트는 오버로딩 타입 중에 일치하는 타입을 찾을 때 까지 순차적으로 검색하게 되는데,
+
+오버로딩 타입의 마지막 선언인 `string` 을 검색했을 때, string | number 는 string 에 할당될 수 없으므로 에러가 발생한다.
+
+
+
+### 조건부 타입
+
+가장 좋은 해결책은 조건부 타입을 활용하는 것이다.
+
+```tsx
+function double<T extends number | string>(
+  x: T
+): T extends string ? string : number;
+function double(x: any) {
+  return x + x;
+}
+```
+
+
+
+### 정리
+
+* 오버로딩 타입보다 조건부 타입을 사용하는 것이 좋다. 조건부 타입은 추가적인 오버로딩 없이 유니온 타입을 지원할 수 있다.
+
+
+
+## 아이템 51. 의존성 분리를 위해 미러 타입 사용하기
+
+다음과 같은 코드가 있다고 가정하자.
+
+```tsx
+function parseCSV(contents: string | Buffer): { [column: string]: string }[] {
+  if (typeof contents == "object") {
+    return parseCSV(contents.toString("utf8"));
+  }
+  // ...
+}
+```
+
+
+
+위 코드는 `NodeJS` 사용자를 위해 `Buffer` 타입을 허용한다.
+
+이 `Buffer` 타입 정의는 `@types/node` 를 설치하여 얻을 수 있다.
+
+
+
+문제는, 자바스크립트 개발자는 `@types` 와 무관하며, 타입스크립트 웹 개발자는 `NodeJS` 와 무관하다는 점이다.
+
+
+
+이 경우, 각자가 필요한 모듈만 사용할 수 있도록 구조적 타이핑을 적용할 수 있다.
+
+```tsx
+interface CSVBuffer {
+  toString(encoding: string): string;
+}
+
+function parseCSV(
+  contents: string | CSVBuffer
+): { [column: string]: string }[] {
+  if (typeof contents == "object") {
+    return parseCSV(contents.toString("utf8"));
+  }
+  // ...
+}
+```
+
+
+
+CSVBuffer 는 실제고 필요한 부분만을 떼어 내어 명시했고, 해당 타입이 `Buffer` 와 호환되므로 `NodeJS ` 에서도 실제 Buffer 인스턴스로 parseCSV 를 호출하는 것이 가능해진다.
+
+
+
+### 정리
+
+* 필수가 아닌 의존성을 분리할 때는 구조적 타이핑을 사용하면 된다.
+* 공개한 라이브러리를 사용하는 자바스크립트 사용자가 @types 의존성을 가지지 않게 해야 한다.
+  그리고 웹 개발자가 NodeJS 관련 의존성을 가지지 않게 해야 한다.
+
+
+
+
+
+
+
+## 아이템52. 테스팅 타입의 함정에 주의하기
+
+
+
+### 타입 선언 테스트
+
+```tsx
+const lengths: number[] = map(['john', 'paul'], name => name.length)
+```
+
+위 코드는 불필요한 타입 선언의 역할을 한다. 이미 추론되는 타입이기 때문이다.
+
+그러나 테스트 코드 관점에서는 중요한 역할을 하게 된다.
+
+`number[]` 타입 선언은 반환 타입이 `number[]` 임을 보장한다.
+
+그러나 테스팅을 위해 할당을 사용하는 방식은 두 가지 근본적인 문제가 있다.
+
+
+
+### 문제점 1 - 불필요한 변수를 만들어야 한다.
+
+반환값을 할당하는 변수는 `미사용 변수 경고` 같은 린팅 규칙을 비활성화해야 한다.
+
+일반적인 해결책은 변수 도입 대신 헬퍼 함수를 정의하는 것이다.
+
+
+
+```tsx
+function assertType<T>(x: T){}
+assertType<number[]>(map(['john', 'paul'], name => name.length));
+```
+
+이 코드는 불필요한 변수 문제를 해결하지만, 다른 문제점이 또 남아 있다.
+
+
+
+### 문제점 2 - 두 타입이 동일한지 체크하는것이 아니라 할당 가능성을 체크한다.
+
+다음 코드를 보자.
+
+```tsx
+const beatles = ['john', 'paul', 'george', 'ringo'];
+assertType<{name: string}[]>(
+	map(beatles, name => ({
+    name, 
+    inYellowSubmarine: name === 'ringo'
+  }))
+)
+```
+
+
+
+map은 {name, inYellowSubmarine} 객체의 배열을 반환하고, 이는 {name: string}[]에 할당 가능하지만 `inYellowSubmarine` 이 체크되지 않았다.
+
+
+
+### 제대로 된 해결책
+
+다음 코드처럼 `Parameters, ReturnType` 제너릭 타입을 이용해 함수 매개변수 타입과 반환 타입만 분리하여 테스트할 수 있다.
+
+```tsx
+const double = (x: number) => 2 * x;
+let p: Parameters<typeof double> = null!;
+asserType<[number, number]>(p); // ERROR: [number] 형식의 인수는 [number, number] 형식의 매개변수에 할당될 수 없다.
+
+let r: ReturnType<typeof double> = null!;
+assertType<number>(r);
+```
+
+
+
+### dtslint
+
+dtslint를 사용하면 예제 테스트를 다음과 같이 작성할 수 있다.
+
+```tsx
+const beatles = ['john', 'paul', 'george', 'ringo'];
+map(beatles, function(
+   name,	//	$ExpectType string
+   i,			//	$ExpectType number
+	 array	//	$ExpectType string[]
+){
+  this		//	$ExpectType string[]
+  return name.length;
+})				//	$ExpectType number[]
+```
+
+
+
+### 정리
+
+* 타입을 테스트 할 때는 함수 타입의 동일성과 할당 가능성의 차이점을 알고 있어야 한다.
+* 콜백이 있는 함수 테스트의 경우, 매개변수 추론 타입을 체크해야 한다.
+* 타입 관련 테스트에서 any 를 주의해야 한다. 더 엄격한 테스트를 위해서는 dtslint 같은 도구를 사용하는 것이 좋다.
+
+
+
