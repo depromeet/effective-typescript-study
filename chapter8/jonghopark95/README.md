@@ -1,449 +1,241 @@
-# 7장. 코드를 작성하고 실행하기
-
-7장에서는 타입과 관계는 없지만 코드를 작성하고 실행하면서 실제로 겪을 수 있는 문제들을 다룬다.
+# 8장. 타입스크립트로 마이그레이션하기
 
 
 
-## 아이템 53. 타입스크립트 기능보다는 ECMAScript 기능을 사용하기
-
-타입스크립트가 태동하던 2010년, 자바스크립트는 결함이 많고 개선해야 할 부분이 많은 언어였다.
-
-클래스, 데코레이터, 모듈 시스템 같은 기능이 없어 이를 프레임워크나 트랜스파일러로 보완하는게 일반적인 모습이었다.
-
-그래서 타입스크립트도 초기 버전에는 독립적으로 개발된 클래스, 열거형, 모듈 시스템을 포함시킬 수 밖에 없었다.
+## 아이템 58. 모던 자바스크립트로 작성하기
 
 
 
-현재 타입스크립트 팀은 자바스크립트 신규 기능을 그대로 채택하고, 타입스크립트 초기 버전과 호환성을 포기하고 있다.
+타입스크립트는 타입 체크 기능 외에, 타입스크립트 코드를 특정 버전 자바스크립트로 컴파일 하는 기능도 가지고 있다.
 
-근데 이 원칙이 세워지기 전에 이미 사용되는 몇 가지 기능이 있다. 
+옛날 버전의 JS 코드를 타입스크립트 컴파일러에서 동작하게 하면, 이후엔 최신 버전의 JS 코드를 써도 문제가 없다.
 
-이 기능들은 타입 공간과 값 공간의 경계를 혼란스럽게 만드므로 사용하지 않는게 좋다.
-
-
-
-피해야 하는 기능 몇 가지와, 이 기능을 사용하게 될 경우 어떤 점에 유의해야 하는지 알아보자.
+따라서 옛날 버전 자바스크립트 코드를 최신 버전으로 바꾸는 작업은 마이그레이션의 일부다.
 
 
 
-### 열거형 (enum)
+### ECMAScript 모듈 사용하기
 
-타입스크립트의 열거형은 몇 가지 문제가 있다.
+ES2015 이전에는 코드를 개별 모듈로 분할하는 표준 방법이 없었으나, 지금은 많아졌다.
 
-* 숫자 열거형에 0, 1, 2 외의 다른 숫자가 할당되면 매우 위험하다.
-* 상수 열거형은 보통의 열거형과 달리 런타임에 완전히 제거된다.
-  `const enum Flavor` 로 바꾸면 컴파일러는 Flavor.CHOCOLATE 을 0으로 바꿔 버린다.
-* `preserveConstEnums` 플래그를 설정한 상태의 상수 열거형은 보통 열거형 처럼 런타임 코드에 상수 열거형 정보를 유지한다.
-* 문자형 열거형은 런타임의 타입 안정성과 투명성을 제공한다.
-  그러나 타입스크립트의 다른 타입과 달리 구조적 타이핑이 아닌 명목적 타이핑을 사용한다.
+* 여러 개의 <script> 태그 사용하기
+* 직접 갖다 붙이기 (manual concatenation)
+* MakeFile 기법
+* NodeJS 스타일의 require 구문
+* AMD 스타일의 define 콜백
+* TS 자체 모듈 시스템
+* ECMAScript 모듈 시스템
 
 
+
+ES2015 부터는 Import, export 를 사용하는 ECMAScript 모듈이 표준이 되었다.
+
+만약, 마이그레이션 대상 자바스크립트 코드가 단일 파일이거나 비표준 모듈 시스템을 사용중이라면 ES 모듈로 전환하는 것이 좋다.
+
+
+
+### 프로토타입 대신 클래스 사용하기
+
+과거에는 자바스크립트에서 프로토타입 기반의 객체 모델을 사용했지만, 현재는 ES6부터 도입된 클래스를 주로 사용한다.
+
+TS 에서는 Convert functino to an ES2015 class 를 선택하면 간단히 클래스 객체로 변환할 수 있다.
+
+
+
+### var 대신 let/const 사용하기
+
+var 는 scope 규칙에 문제가 있다. 이 때문에, let / const 를 사용하는 것이 더 추천된다.
+
+또 function 중첩문을 사용하는 경우, 호이스팅 때문에 예상치 못한 함수 호출이 발생할 수 있다. 대신 arrow function 을 사용하는 것이 좋다.
+
+
+
+### for(;;) 대신 for-of 또는 배열 메서드 사용하기
+
+과거엔 JS 배열 순회 시 C 스타일의 for 루프를 사용했으나, 모던 JS 는 for-of 가 있다.
+
+
+
+### 함수 표현식 보다는 화살표 함수 사용하기
+
+가급적 화살표 함수를 사용하는 것이 좋다. (this 바인딩)
+
+그리고 컴파일러 옵션에 noImplicitThis 를 설정하면 TS 가 this 바인딩 관련 오류를 표시해준다.
+
+
+
+### 단축 객체 표현과 구조 분해 할당 사용하기
+
+객체 구조 분해를 사용하면 문법이 간결해지고 변수를 사용할 때 실수를 줄일 수 있으므로 적극적으로 사용해보는 것이 좋다.
+
+
+
+### 함수 매개변수 기본값 사용하기
+
+모던 JS 에서는 매개변수에 기본값을 직접 지정할 수 있다.
+
+이는 Ts 에서 기본값을 기반으로 타입 추론이 가능해지므로 타입스크립트로 마이그레이션 할 때 매개변수에 타입 구문을 쓰지 않아도 된다.
+
+
+
+### 저수준 프로미스나 콜백 대신 async/await 사용하기
+
+async await 을 사용하면 비동기 코드에 타입 정보가 전달되어 타입 추론을 가능하게 한다.
+
+
+
+### 연관 배열에 객체 대신 Map 과 Set 사용하기
 
 ```tsx
-enum Flavor {
-  VANILLA = "vanilla",
-  CHOCOLATE = "chocolate"
-}
-
-let flavor = Flavor.CHOCOLATE;
-flavor = "chocolate"; // ERROR: Type '"chocolate"' is not assignable to type 'Flavor'
-```
-
-이는 문제가 될 수 있는데, 자바스크립트에서는 런타임 시점에서 Flavor.CHOCOLATE 이 문자열이므로 이를 "chocolate" 처럼 호출할 수 있지만 타입스크립트는 Flavor 를 Import 해야 한다.
-
-따라서 타입스크립트, 자바스크립트의 동작이 달라지므로 문자열 열거형은 사용하지 않는게 좋다.
-
-열거형 대신 리터럴 타입의 유니온을 사용하면 된다.
-
-
-
-### 매개변수 속성
-
-일반적으로 클래스 초기화 시 속성 할당을 위해 생성자의 매개변수를 사용한다.
-
-```tsx
-class Person {
-  name: string;
-  constructor(name: string){
-    this.name = name;
+function countWords(text: string) {
+  const counts: { [word: string]: number } = {};
+  for (const word of text.split(/[\s,.]+/)) {
+    counts[word] = 1 + (counts[word] || 0);
   }
+  return counts;
 }
+
+console.log(countWords("objects have a constructor"));
+
+// return
+// {objects: 1, have: 1, a: 1, constructor: Object}
+// objects: 1
+// have: 1
+// a: 1
+// <constructor>: "Object"
 ```
 
 
 
-타입스크립트는 더 간결한 문법을 제공한다.
+constructor 라는 문자열이 주어지면 constructor 초기값이 있기 때문에 에러가 발생한다.
 
-```tsx
-class Person {
-  constructor(public name: string){}
-}
-```
-
-
-
-`public name` 은 매개변수 속성이라고 불리며, 멤버 변수로 name 을 선언한 예제와 동일하게 동작한다.
-
-
-
-그러나, 매개변수 속성과 관련된 몇 가지 문제점이 존재한다.
-
-* 일반적으로 타입스크립트 컴파일은 타입 제거가 이루어지므로 코드가 줄어들지만,
-  매개변수 속성은 코드가 늘어나는 문법이다.
-* 매개변수 속성이 런타임에는 실제로 사용되지만, 타입스크립트 관점에서는 사용되지 않는 것 처럼 보인다.
-* 매개변수 속성과 일반 속성을 섞어서 사용하면 클래스 설계가 혼란스러워진다.
-
-
-
-매개변수 속성은 사용하는 것이 좋은지에 대한 찬반 논란이 있다.
-
-매개변수 속성은 타입스크립트의 다른 패턴과 달리 이질적이고, 생소한 문법임을 인지해야 한다.
-
-또, 같이 사용하면 혼란스러워지므로 한 가지만 사용하는 것이 좋다.
-
-
-
-### 네임스페이스와 트리플 슬래시 임포트
-
-ES6 이전에는 JS 에는 공식적인 모듈 시스템이 없었다.
-
-그래서 각 환경마다 자신만의 방법으로 모듈 시스템을 마련했다.
-
-타입스크립트는 `module ` 키워드와 `트리플 슬래시` 임포트를 사용했다.
-
-ES6가 공식적으로 모듈 시스템을 도입한 이후, TS 는 충돌을 피하기 위해 `module` 과 같은 기능을 하는 `namespace` 키워드를 추가했다.
-
-```tsx
-namespace foo {
-  function bar() {}
-}
-
-/// <reference path="./other.ts" />
-
-foo.bar();
-```
-
-
-
-### 데코레이터
-
-데코레이터는 클래스, 메서드, 속성에 annotation 을 붙이거나 기능을 추가하는 데 사용할 수 있다.
-
-예를 들어, 클래스의 메서드가 호출될 때마다 로그를 남기려면 `logged` 애너테이션을 정의할 수 있다.
+이런 문제를 방지하려면 Map 을 사용하는 것이 좋다.
 
 
 
 ```tsx
-function logged(target: any, name: string, descriptor: PropertyDescriptor) {
-  const fn = target[name];
-  descriptor.value = function () {
-    console.log(`Calling ${name}`);
-    return fn.apply(this, arguments);
-  };
-}
-
-class Greeter {
-  greeting: string;
-  constructor(message: string) {
-    this.greeting = message;
+function countWords(text: string) {
+  const counts = new Map<string, number>();
+  for (const word of text.split(/[\s,.]+/)) {
+    counts.set(word, 1 + (counts.get(word) || 0));
   }
-
-  @logged
-  greet() {
-    return "Hello, " + this.greeting;
-  }
+  return counts;
 }
 
-console.log(new Greeter("Dave").greet());
+console.log(countWords("objects have a constructor"));
 ```
 
 
 
-데코레이터는 앵귤러 프레임워크를 지원하기 위해 추가되었다.
+### 타입스크립트에 use strict 넣지 않기
 
-이는 표준화가 완료되지 않았기 때문에, 호환성이 꺠질 가능성이 있으므로 표준이 되기 전까지는 데코레이터를 사용하지 않는게 좋다.
+타입스크립트에서 수행하는 안전성 검사가 strict mode 보다 엄격한 체크를 하므로, 'use strict' 는 무의미하다.
+
+실제로는 typescript compiler 가 생성하는 JS 코드에서 'use strict' 가 추가된다.
+
+alwaysStrict 를 설정하면 자동으로 'use strict' 를 추가하므로 이 설정을 사용해야 한다.
+
+
+
+
+
+## 아이템 59. 타입스크립트 도입 전에 @ts-check 와 JSDoc 으로 시험해 보기
+
+
+
+@ts-check 지시자로 타입스크립트 전환 시 어떤 문제가 발생하는 지 미리 시험해 볼 수 있다.
+
+그러나 @ts-check 지시자는 noImplicitAny 보다 더 헐거운 체크를 수행한다.
+
+
+
+### 선언되지 않은 전역 변수
+
+만약, 숨어 있는 변수를 제대로 인식시키기 위해선 별도로 타입 선언 파일을 만들어야 한다.
+
+types.d.ts 를 만들면 오류가 해결이 된다.
 
 
 
 ### 정리
 
-* 일반적으로 타입스크립트 코드에서 모든 타입 정보를 제거하면 타입스크립트가 되지만,
-  열거형, 매개변수 속성, 트리플 슬래시 임포트, 데코레이터는 그렇지 않다.
-
-* 타입스크립트의 역할을 명확히 하려면 이를 사용하지 않는 것이 좋다.
-
-  
-
-### 아이템 54. 객체를 순회하는 노하우
-
-다음 코드는 정상적으로 실행되지만, 편집기에서는 에러가 발생한다.
-
-```tsx
-const obj = {
-  one: "uno",
-  two: "dos",
-  three: "tres"
-};
-
-for (const k in obj) {
-  const v = obj[k]; // ERROR: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ one: string; two: string; three: string; }'.
-  No index signature with a parameter of type 'string' was found on type '{ one: string; two: string; three: string; }
-}
-```
+- 파일 상단에 // @ts-check 을 추가하면 자바스크립트에서도 타입 체크를 수행할 수 있다.
+- 전역 선언, 서드파티 라이브러리의 타입 선언을 추가하는 법을 익혀야 한다.
+- JSDoc 을 잘 활용하면 자바스크립트 상태에서도 타입 단언, 타입 추론을 할 수 있다.
+- JSDoc 주석은 중간 단계 이므로 너무 공들일 필요 없다.
 
 
 
-이는 k 의 타입이 string 인 반면, obj 는 'one, two, three' 세 개의 키만 존재하기 때문이다.
+## 아이템 60. allowJS 로 타입스크립트와 자바스크립트 같이 사용하기
 
-k 의 타입을 더 구체적으로 명시해주면 오류가 사라진다.
+소규모 프로젝트는 한꺼번에 타입스크립트로 전화할 수 있지만, 대규모 프로젝트는 불가능하므로 점진적으로 전환해야 한다.
 
-
-
-```tsx
-const obj = {
-  one: "uno",
-  two: "dos",
-  three: "tres"
-};
-
-let k: keyof typeof obj;
-for (k in obj) {
-  const v = obj[k];
-}
-```
+그러려면 마이그레이션 기간 동안 JS, TS 가 동시에 동작할 수 있어야 한다.
 
 
 
-이는 object 에 다른 속성이 존재할 수 있기 때문에, 구체적인 키가 아닌 string 으로 정한 것이다.
+공존의 핵심은 allowJS 옵션인데, 이는 TS, JS 를 서로 import 할 수 있게 해준다.
 
-이와 같이 타입 문제 없이 단지 객체의 키와 값을 순회하고 싶다면, `Object.entries` 를 사용하면 된다.
+또, 기존 빌드 과정에 타입스크립트 컴파일러를 추가해야 하며 모듈 단위로 TS로 전환하는 과정에서 테스트를 수행해야 하므로 allowJS 옵션이 필요하다.
+
+
+
+
+
+## 아이템 61. 의존성 관계에 따라 모듈 단위로 전환하기
+
+점진적 마이그레이션을 할 때는 모듈 단위로 각개격파하는 것이 이상적이다.
+
+그러나 한 모듈을 골랐을 때, 해당 모듈이 다른 모듈로부터 의존하게 된다면 타입 오류가 발생하게 된다.
+
+이를 방지하기 위해서는 최하단 모듈부터 작업을 시작해야 한다.
+
+
+
+서드파티, 외부 API 모듈은 특정 모듈에 의존하지 않으므로, 먼저 해결하는 것이 좋다.
+
+
+
+### 선언되지 않은 클래스 멤버
+
+TS 에서는 멤버 변수를 반드시 선언해줘야 한다.
+
+
+
+### 타입이 바뀌는 값
+
+객체는 한꺼번에 생성해주어야 한다.
 
 
 
 ### 정리
 
-* 객체 순회 시, 키가 어떤 타입인지 정확히 파악하고 있다면 `let k: keyof T` 와 `for-in` 루프를 사용하자.
-  함수의 매개변수로 쓰이는 객체는 추가적인 키가 존재할 수 있다는 점을 명심하자.
-* 객체를 순회하며 키와 값을 얻는 가장 일반적인 방법은 `Object.entries` 를 사용하는 것이다.
+- 마이그레이션의 첫 단계는 서드파티 모듈과 외부 API 호출에 대한 @types 를 추가하는 것이다.
+- 의존성 관계도의 아래부터 위로 올라가며 마이그레이션 하면 된다.
+- 이상한 설계를 발견해도 리펙터링하면 안된다. 이는 나중으로 목록을 만드는 것이 좋다.
+- 타입스크립트로 전환하며 발견되는 일반적인 오류들을 놓치지 말아야 한다.
 
 
 
+## 아이템 62. 마이그레이션 완성을 위해 noImplicitAny 설정하기
 
+프로젝트를 .ts 로 전환했다면 매우 큰 진척을 이루어 낸 것이지만, 마지막 단계가 있다.
 
-## 아이템 55. DOM 계층 구조 이해하기
+바로 타입의 강도를 높이는 것이다. any 로 선언된 타입은 오류가 숨어있으므로 진정한 마이그레이션이 진행되었다고 보기 어렵다.
 
-타입스크립트에서는 DOM 엘리먼트의 계층 구조를 파악하기 용이하다.
+타입 체크의 강도를 높이는 설정은 여러 가지가 있다.
 
-Element, EventTarget 에 달려있는 Node 의 구체적인 타입을 안다면 타입 오류를 디버깅할 수 있고, 언제 타입 단언을 사용해야 할 지 알 수 있다.
-
-
-
-### 계층 구조에 따른 타입
-
-계층 구조별로 타입은 다음과 같다.
-
-* EventTarget ( window, XMLHttpRequest )
-* Node (document, Text, Comment)
-* Element (HTMLElement, SVGElement, ...)
-* HTMLElement (<i>, <b>)
-* HTMLButtonElement (<button>)
-
-
-
-### EventTarget
-
-EventTarget 은 DOM 타입 중 가장 추상화된 타입이다.
-
-이벤트 리스너를 추가하거나 제거하고, 이벤트를 보내는 것 밖에 할 수 없다.
-
-
-
-### Node
-
-Node에는 Text, 주석 등이 있다.
-
-
-
-### Element, HTMLElement
-
-SVG 태그의 전체 계증 구조를 포함하며 HTML 이 아닌 엘리먼트가 존재하는데, 이는 SVGElement 이다.
-
-예를 들어, <html> 은 HTMLHtmlElement 이고 <svg> 는 SVGSvgElement 이다.
-
-
-
-### HTMLxxxElement
-
-HTMLxxxElement 는 자신만의 고유 속성을 가지고 있다.
-
-예를 들어, HTMLImageElement 에는 src 속성이 있고, HTMLInputElement 는 value 속성이 있다.
-
-
-
-### Event
-
-Event 타입에도 별도의 계층 구조가 있다.
-
-Event 는 가장 추상화된 타입이며, 더 구체적인 타입들은 다음과 같다.
-
-* UIEvent: 모든 종류의 사용자 인터페이스 이벤트
-* MouseEvent: 클릭처럼 마우스로부터 발생되는 이벤트
-* TouchEvent: 모바일 기기 터치 이벤트
-* WheelEvent: 스크롤 휠을 돌려서 발생되는 이벤트
-* KeyboardEvent: 키 누름 이벤트
+- noImplicitAny
+- strictNullChecks
+- "strict": true
 
 
 
 ### 정리
 
-* DOM 에는 타입 계층 구조가 있다. DOM 타입은 타입스크립트에서 중요한 정보이며, 브라우저 관련 프로젝트에서 타입스크립트를 사용할 때 유용하다.
+- noImplicitAny 설정을 활성화하여 마이그레이션의 마지막 단계를 진행해야 한다.
+  noImplicitAny 설정이 없다면 타입 선언과 관련된 실제 오류가 드러나지 않는다.
+- noImplicitAny 를 전면 적용하기 전에 로컬에서부터 타입 오류를 점진적으로 수행해야 한다.
 
 
-
-## 아이템 56. 정보를 감추는 목적으로 private 사용하지 않기
-
-자바스크립트는 클래스에 비공개 속성을 만들 수 없다.
-
-그러나, 타이븟크립트에는 public, protected, private 접근 제어자를 사용해 공개 규칙을 강제하는 것으로 오해할 수 있다.
-
-
-
-컴파일 시점에서는 public, protected, private 같은 접근 제어자는 제거되며, 이는 접근할 수 있게 된다.
-
-심지어 단언문을 사용하면 타입스크립트 상태에서도 private 속성에 접근할 수 있다.
-
-```tsx
-class Diary {
-  private secret = "testtest!!";
-}
-
-const diary = new Diary();
-(diary as any).secret;
-```
-
-
-
-즉, 정보를 감추는 목적으로 private 을 사용하면 안된다.
-
-
-
-### Closure
-
-자바스크립트에서 정보를 숨기기 위해 효과적인 방법은 클로저를 사용하는 것이다.
-
-```tsx
-declare function hash(text: string): number;
-
-class PasswordChecker {
-  checkPassword: (password: string) => boolean;
-  constructor(passwordHash: number) {
-    this.checkPassword = (password: string) => {
-      return hash(password) === passwordHash;
-    };
-  }
-}
-
-const checker = new PasswordChecker(hash("s3cret"));
-checker.checkPassword("s3cret");
-```
-
-
-
-위 코드는 PasswordChecker 생성자 외부에서 passwordHash 변수에 접근할 수 없기 때문에 정보를 숨기는 목적을 달성했다.
-
-그러나 몇 가지 문제가 있는데,
-
-1. passwordHash 를 생성자 외부에서 접근할 수 없으므로 passwordHash에 접근하는 메서드 역시 생성자 내부에 정의되어야 한다는 것이다.
-
-2. 그리고 메서드 정의가 생성자 내부에 존재하게 되면, 인스턴스를 생성할 때마다 메서드의 복사본이 생성되기 때문에 메모리를 낭비하게 된다.
-3. 동일한 클래스로부터 생성된 인스턴스라고 하더라도 서로의 비공개 데이터에 접근하는 것이 불가능하므로 불편함이 따른다.
-
-
-
-### # 사용하기
-
-다른 선택지로, 현재 표준화가 진행 중인 비공개 필드 기능을 사용할 수도 있다.
-
-비공개 필드 기능은 타입 체크, 런타임 모두에서 비공개로 만드는 역할을 한다.
-
-```tsx
-declare function hash(text: string): number;
-
-class PasswordChecker {
-  #passwordHash: number;
-
-  constructor(passwordHash: number) {
-    this.#passwordHash = passwordHash;
-  }
-
-  checkPassword(password: string) {
-    return hash(password) === this.#passwordHash;
-  }
-}
-
-const checker = new PasswordChecker(hash("s3cret"));
-
-console.log(checker.checkPassword("secret")); // false
-console.log(checker.checkPassword("s3cret")); //  true
-```
-
-
-
-#passwordHash 는 클래스 외부에서 접근할 수 없다.
-
-그러나 클로저와는 달리 클래스 메서드나 동일 클래스 개별 인스턴스끼리는 접근 가능하다.
-
-
-
-### 정리
-
-* public, protected, private 접근 제어자는 타입 시스템에서만 강제될 뿐이다.
-  런타임에서는 소용이 없으며 단언문을 통해 우회할 수 있다.
-* 확실히 데이터를 감추고 싶다면 클로저를 사용해야 한다.
-
-
-
-
-
-## 아이템 57. 소스맵을 사용하여 타입스크립트 디버깅하기
-
-
-
-자바스크립트는 크로스 브라우징, 하위 버전 브라우저, IE 지원 등으로 기존에 작성된 코드들을 변환하는 작업을 거친다.
-
-해당 작업을 거치며 기존 코드와 많이 다른 형태를 띄게 되므로, 이를 디버깅 하기엔 굉장한 어려움이 따른다.
-
-브라우저 제조사들은 이를 위해 소스맵이라는 도구를 개발하였다.
-
-소스맵은 변환되는 코드의 위치와 심벌들을 원래 위치와 심벌로 매핑하여 디버깅 시 기존 코드의 위치를 파악할 수 있게 해준다.
-
-
-
-### 타입스크립트의 소스맵
-
-타입스크립트도 이를 지원하는데, tsconfig.json 에서 `souceMap` 옵션을 통해 가능해진다.
-
-```tsx
-{
-  "compilerOptions": {
-    "sourceMap": true
-  }
-}
-```
-
-
-
-이제 컴파일을 실행하면 .ts 파일에 대해 .js, .js.map 두 개의 파일을 생성한다. .js.map 이 바로 소스맵이다.
-
-소스맵이 .js 파일과 같이 있으면 브라우저의 디버거에서 새로운 index.ts 파일이 나타나고, 이를 사용해 디버깅을 할 수 있다.
-
-
-
-### 소스맵에 대해 알아야 할 사항
-
-- TS 와 함께 bundler, minifier 를 사용한다면 각 bundler, minifier 가 각자의 소스맵을 생성한다.
-  이상적인 디버깅 환경이 되려면 생성된 JS 가 아닌, 원본 TS 소스로 매핑되도록 해야 한다.
-  번들러가 기본적으로 TS 를 지원한다면 별도 설정 없이 잘 동작해야 한다.
-  그렇지 않다면 번들러가 소스맵을 인식할 수 있도록 추가적인 설정이 필요하다.
-- 상용 환경에 소스맵이 유출되고 있는지 확인해야 한다. 소스맵에 공개해서는 안될 내용이 들어 있을 수도 있다.
 
