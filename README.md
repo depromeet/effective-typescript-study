@@ -16,7 +16,7 @@
 | 주제     |         eun-seong          |         eungyeole          |         HanCheo          | hy57in |         jonghopark95          |         ykss          |
 | :------- | :------------------------: | :------------------------: | :----------------------: | :----: | :---------------------------: | :-------------------: |
 | chapter1 | [🔗](./chapter1/eun-seong) |                            |                          |        | [🔗](./chapter1/jonghopark95) | [🔗](./chapter1/ykss) |
-| chapter2 | [🔗](./chapter2/eun-seong) |                            | [🔗](./chapter2/HanCheo) |        | [🔗](./chapter2/jonghopark95) |                       |
+| chapter2 | [🔗](./chapter2/eun-seong) |                            | [🔗](./chapter2/HanCheo) |        | [🔗](./chapter2/jonghopark95) | [🔗](./chapter2/ykss) |
 | chapter3 | [🔗](./chapter3/eun-seong) |                            | [🔗](./chapter3/HanCheo) |        | [🔗](./chapter3/jonghopark95) |                       |
 | chapter4 |                            | [🔗](./chapter4/eungyeole) | [🔗](./chapter4/HanCheo) |        | [🔗](./chapter4/jonghopark95) | [🔗](./chapter4/ykss) |
 | chapter5 |                            |                            | [🔗](./chapter5/HanCheo) |        | [🔗](./chapter5/jonghopark95) | [🔗](./chapter5/ykss) |
